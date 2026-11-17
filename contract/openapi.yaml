@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: Safarnama Wrap API
+  version: 1.0.0
+  description: |
+    Returns a user's year-in-travel wrap as an ordered list of pages.
+
+    Design rules:
+    - The request carries only `userId`. Everything else (year, locale, which
+      pages, copy) is decided on the server.
+    - The server decides which pages a user sees. A user with 2 trips gets a
+      short wrap; a heavy traveller gets up to 12 content pages, ranked by how
+      interesting each one is for that user.
+    - Each page has a `type`, a `dwellMs` (reading time after its animation ends), server-resolved `copy` and a
+      typed `data` payload. Clients render by `type` and silently skip types
+      they don't recognise, so new page types can ship server-side first.
+    - Numbers in `data` drive animations (Rive state-machine inputs on
+      Android, React components on web). Text in `copy` is shown as-is.
+servers:
+  - url: http://localhost:8787
+paths:
+  /api/v1/wrap:
+    post:
+      operationId: getWrap
+      summary: Get the wrap for one user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WrapRequest'
+            example: { userId: u_aarav }
+      responses:
+        '200':
+          description: The user's wrap
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WrapResponse' }
+        '400':
+          description: Body missing or userId not a string
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404':
+          description: Unknown userId
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '422':
+          description: User has no trips this year, so there is no wrap
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+components:
+  schemas:
+    WrapRequest:
+      type: object
+      additionalProperties: false
+      required: [userId]
+      properties:
+        userId: { type: string, minLength: 1, maxLength: 64 }
+    WrapResponse:
+      type: object
+      required: [schemaVersion, wrapId, userId, year, generatedAt, locale, currency, user, pages, share]
+      properties:
+        schemaVersion: { type: string, enum: ['1.0'] }
+        wrapId: { type: string }
+        userId: { type: string }
+        year: { type: integer }
+        generatedAt: { type: string, format: date-time }
+        locale: { type: string, example: en-IN }
+        currency: { type: string, enum: [INR] }
+        user:
+          type: object
+          required: [firstName, memberSince]
+          properties:
+            firstName: { type: string }
+            memberSince: { type: integer }
+        pages:
+          type: array
+          items: { $ref: '#/components/schemas/WrapPage' }
+        share: { $ref: '#/components/schemas/ShareCard' }
+    WrapPage:
+      type: object
+      required: [id, type, dwellMs, copy, data]
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          description: Page kind. The shape of `data` depends on it (see PageData*). Unknown values must be skipped by clients.
+          enum: [INTRO, FIRST_STEPS, ODOMETER, PEAK_MONTH, TOP_ROUTE, NIGHT_OWL, EARLY_BIRD, SEAT, RAIL, WAITLIST,
+                 LAST_MINUTE, PLANNER, FLEXI, LIVE_TRACKING, HOMEWARD, EXPLORER, SQUAD, SAVINGS, PRIMO, ECO, DREAM,
+                 PERSONA, SUMMARY]
+        dwellMs:
+          type: integer
+          description: |
+            Reading time. The client starts this timer only after the page's entrance
+            animation has finished, then auto-advances. Taps still move on at any time.
+        copy: { $ref: '#/components/schemas/Copy' }
+        data:
+          type: object
+          description: One of the PageData* schemas, chosen by `type`.
+      discriminator:
+        propertyName: type
+    Copy:
+      type: object
+      required: [kicker, headline]
+      properties:
+        kicker: { type: string }
+        headline: { type: string }
+        body: { type: string }
+        bubble: { type: string, description: Line the mascot says }
+    Stat:
+      type: object
+      required: [label, value]
+      properties: { label: { type: string }, value: { type: string } }
+    City:
+      type: object
+      required: [code, name, lat, lon]
+      properties: { code: { type: string }, name: { type: string }, lat: { type: number }, lon: { type: number } }
+    ShareCard:
+      type: object
+      required: [personaTitle, stats]
+      properties:
+        personaTitle: { type: string }
+        stats: { type: array, items: { $ref: '#/components/schemas/Stat' } }
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, enum: [BAD_REQUEST, USER_NOT_FOUND, NOT_ENOUGH_DATA, INTERNAL] }
+            message: { type: string }
+
+    # ---- Page payloads (value of WrapPage.data, keyed by WrapPage.type) ----
+    PageDataINTRO:
+      type: object
+      properties: { year: { type: integer }, totalTrips: { type: integer } }
+    PageDataFIRST_STEPS:
+      type: object
+      properties: { trips: { type: integer }, from: { type: string }, to: { type: string }, date: { type: string } }
+    PageDataODOMETER:
+      type: object
+      properties:
+        totalKm: { type: integer }
+        busTrips: { type: integer }
+        trainTrips: { type: integer }
+        cities: { type: array, items: { $ref: '#/components/schemas/City' } }
+        legs:
+          type: array
+          items:
+            type: object
+            properties:
+              from: { type: string, description: City code }
+              to: { type: string }
+              mode: { type: string, enum: [BUS, TRAIN] }
+              count: { type: integer }
+        equivalent:
+          type: object
+          properties: { label: { type: string }, times: { type: number } }
+    PageDataPEAK_MONTH:
+      type: object
+      properties:
+        monthly: { type: array, items: { type: integer }, minItems: 12, maxItems: 12 }
+        peakMonthIndex: { type: integer, minimum: 0, maximum: 11 }
+        peakTrips: { type: integer }
+        longestGapDays: { type: integer }
+    PageDataTOP_ROUTE:
+      type: object
+      properties: { from: { type: string }, to: { type: string }, count: { type: integer }, topPercentOnRoute: { type: number } }
+    PageDataNIGHT_OWL:
+      type: object
+      properties: { nights: { type: integer }, nightSharePct: { type: integer }, sunrises: { type: integer }, usualDeparture: { type: string } }
+    PageDataEARLY_BIRD:
+      type: object
+      properties: { morningSharePct: { type: integer }, earliestDeparture: { type: string }, trips: { type: integer } }
+    PageDataSEAT:
+      type: object
+      properties: { seatLabel: { type: string }, count: { type: integer }, windowPct: { type: integer }, berth: { type: string, enum: [LOWER, UPPER, SEATER] } }
+    PageDataRAIL:
+      type: object
+      properties: { trips: { type: integer }, km: { type: integer }, longestHours: { type: number }, topClass: { type: string } }
+    PageDataWAITLIST:
+      type: object
+      properties: { confirmed: { type: integer }, path: { type: array, items: { type: string } }, pnrChecks: { type: integer } }
+    PageDataLAST_MINUTE:
+      type: object
+      properties: { minLeadMinutes: { type: integer }, avgLeadHours: { type: number } }
+    PageDataPLANNER:
+      type: object
+      properties: { avgLeadDays: { type: integer }, earliestDays: { type: integer } }
+    PageDataFLEXI:
+      type: object
+      properties:
+        dateChanges: { type: integer }
+        freeCancellations: { type: integer }
+        feesSaved: { type: integer }
+        from: { type: string }
+        to: { type: string }
+        dates: { type: array, items: { type: string }, description: Original date first, then each change }
+    PageDataLIVE_TRACKING:
+      type: object
+      properties:
+        checks: { type: integer }
+        shares: { type: integer }
+        onTimePct: { type: integer }
+        from: { type: string }
+        to: { type: string }
+        stops: { type: array, items: { type: object, properties: { name: { type: string }, time: { type: string } } } }
+    PageDataHOMEWARD:
+      type: object
+      properties: { tripsHome: { type: integer }, hometown: { type: string }, festivals: { type: array, items: { type: string } }, avgLeadDays: { type: integer } }
+    PageDataEXPLORER:
+      type: object
+      properties: { newCities: { type: array, items: { type: string } }, states: { type: integer } }
+    PageDataSQUAD:
+      type: object
+      properties: { groupBookings: { type: integer }, largestGroup: { type: integer }, seatsBooked: { type: integer } }
+    PageDataSAVINGS:
+      type: object
+      properties: { saved: { type: integer }, chais: { type: integer }, bestDeal: { type: integer }, coupons: { type: integer } }
+    PageDataPRIMO:
+      type: object
+      properties: { rides: { type: integer }, avgRatingGiven: { type: number } }
+    PageDataECO:
+      type: object
+      properties: { co2Kg: { type: integer }, trees: { type: integer } }
+    PageDataDREAM:
+      type: object
+      properties: { destination: { type: string }, searches: { type: integer } }
+    PageDataPERSONA:
+      type: object
+      properties: { personaId: { type: string }, title: { type: string }, traits: { type: array, items: { type: string } } }
+    PageDataSUMMARY:
+      type: object
+      properties:
+        stats: { type: array, items: { $ref: '#/components/schemas/Stat' } }
+        prediction:
+          type: object
+          properties: { destination: { type: string }, by: { type: string } }
