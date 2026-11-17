@@ -11,6 +11,14 @@ import { validateRequest } from './wrap/validate.mjs';
 
 const PORT = Number(process.env.API_PORT || 8787);
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
+const SPEC = fileURLToPath(new URL('../contract/openapi.yaml', import.meta.url));
+const SWAGGER = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14';
+const DOCS_HTML = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wrap API docs</title><link rel="stylesheet" href="${SWAGGER}/swagger-ui.css"></head>
+<body><div id="docs"></div><script src="${SWAGGER}/swagger-ui-bundle.js"></script>
+<script>SwaggerUIBundle({ url: '/api/openapi.yaml', dom_id: '#docs', tryItOutEnabled: true, defaultModelsExpandDepth: 0 });</script>
+</body></html>`;
 const LATENCY_MS = Number(process.env.LATENCY_MS ?? 500); // shows the loading state in demos
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json' };
 
@@ -44,6 +52,14 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, wrap);
     }
     if (url.pathname === '/api/v1/health') return send(res, 200, { ok: true });
+    if (url.pathname === '/api/openapi.yaml') {
+      res.writeHead(200, { 'content-type': 'application/yaml; charset=utf-8', 'access-control-allow-origin': '*' });
+      return res.end(await readFile(SPEC));
+    }
+    if (url.pathname === '/api/docs' || url.pathname === '/api/docs/') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      return res.end(DOCS_HTML);
+    }
     if (process.env.NODE_ENV === 'production' && req.method === 'GET') {
       const rel = normalize(url.pathname).replace(/^(\.\.[/\\])+/, '');
       const file = join(DIST, rel === '/' ? 'index.html' : rel);

@@ -17,7 +17,8 @@ info:
     - Numbers in `data` drive animations (Rive state-machine inputs on
       Android, React components on web). Text in `copy` is shown as-is.
 servers:
-  - url: http://localhost:8787
+  - url: /
+    description: Same origin as the docs page (API on :8787, or through the Vite proxy on :5173)
 paths:
   /api/v1/wrap:
     post:
