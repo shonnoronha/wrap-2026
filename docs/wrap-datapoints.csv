@@ -1,0 +1,137 @@
+id,category,data_point,example_output,data_needed,catchiness_1to5,sensitivity,top_pick
+1,Volume,Total trips completed,23 trips,bookings,3,low,
+2,Volume,Total seats booked,31 seats,bookings,2,low,
+3,Volume,Trips vs last year,+8 trips vs 2025,bookings (2 years),3,low,
+4,Volume,Busiest month,October: 5 trips,bookings,3,low,
+5,Volume,Longest gap between trips,71 days without a bus,bookings,3,low,
+6,Volume,Longest travel streak,6 weekends in a row,bookings,4,low,
+7,Volume,Percentile among all travellers,Top 4% most-travelled,bookings + population stats,5,low,yes
+8,Volume,First trip of the year,3 Jan: Bengaluru to Coorg,bookings,3,low,
+9,Volume,Last trip of the year,28 Dec: Hyderabad to Bengaluru,bookings,3,low,
+10,Distance,Total km travelled,14820 km,route distances,5,low,yes
+11,Distance,Distance equivalent,Kashmir to Kanyakumari 4 times,derived from total km,5,low,yes
+12,Distance,Longest single trip,Bengaluru to Mumbai 984 km,route distances,4,low,
+13,Distance,Shortest trip,Mysuru to Bengaluru 145 km,route distances,2,low,
+14,Distance,Total hours on the road,212 hours,trip durations (actual or scheduled),5,low,yes
+15,Distance,Hours equivalent,9 full days or 106 movies,derived from hours,4,low,
+16,Distance,Longest single journey duration,17 h 40 min,trip durations,4,low,
+17,Distance,Average trip distance,644 km,route distances,2,low,
+18,Geography,Unique cities visited,14 cities,bookings,4,low,yes
+19,Geography,States crossed,6 states,route geometry,4,low,yes
+20,Geography,New cities visited for the first time,5 new cities,lifetime bookings,4,low,
+21,Geography,Most visited destination,Hyderabad 11 times,bookings,5,medium,
+22,Geography,Home base (most frequent origin),Bengaluru,bookings,3,medium,
+23,Geography,Farthest point from home,Mumbai 984 km away,bookings + geo,4,low,
+24,Geography,Destination type split,3 beaches 2 hills 1 temple town,destination tags,4,low,
+25,Geography,Rarest destination,Only 0.3% of travellers went to Gokarna,bookings + population stats,5,low,
+26,Geography,Countries travelled in,India and Malaysia,bookings (intl markets),3,low,
+27,Routes,Top route,Bengaluru-Hyderabad 11 times,bookings,5,low,yes
+28,Routes,Top 3 routes,BLR-HYD / BLR-MAQ / BLR-GOI,bookings,3,low,
+29,Routes,Unique routes travelled,9 routes,bookings,3,low,
+30,Routes,Rank on your top route,Top 2% on BLR-HYD,bookings + population stats,5,low,
+31,Routes,One-way mysteries,Went to Goa twice by bus. Came back somehow,bookings (unpaired legs),5,low,
+32,Routes,Round trip ratio,74% of trips had a return leg,bookings,2,low,
+33,Routes,Favourite boarding point,Madiwala 14 times,boarding point data,4,medium,
+34,Routes,Favourite dropping point,Kukatpally 9 times,dropping point data,3,medium,
+35,Routes,Distinct boarding points used,6 boarding points,boarding point data,2,low,
+36,Time,Day vs night split,82% night departures,departure times,5,low,yes
+37,Time,Most common departure hour,10:45 PM,departure times,4,low,
+38,Time,Favourite day to travel,Friday,departure dates,4,low,
+39,Time,Weekend vs weekday split,68% weekend,departure dates,3,low,
+40,Time,Earliest departure,4:15 AM,departure times,3,low,
+41,Time,Latest departure,1:30 AM,departure times,3,low,
+42,Time,Nights spent on a bus,19 nights,overnight trips,5,low,yes
+43,Time,Sunrises seen from a bus,9 sunrises,arrivals between 5 and 7 AM,5,low,yes
+44,Time,Weekend escapes (Fri out Sun back),7 weekend escapes,paired bookings,4,low,
+45,Time,Monday straight-to-office arrivals,4 Monday 6 AM arrivals,arrival times,5,low,
+46,Booking,Average booking lead time,3 h 12 min before departure,booking + departure timestamps,5,low,yes
+47,Booking,Closest last-minute booking,14 minutes before departure,booking + departure timestamps,5,low,yes
+48,Booking,Earliest planned booking,47 days ahead,booking + departure timestamps,4,low,
+49,Booking,Hour of day you usually book,Most bookings at 1 AM,booking timestamps,4,low,
+50,Booking,Search-to-book speed,Average 4 min; fastest 38 sec,search + booking events,4,low,
+51,Booking,Searches per booking,12 searches per ticket,search events,4,low,
+52,Booking,Most searched route never booked,Searched Manali 17 times. Never went,search events,5,low,yes
+53,Booking,Cancellations,3 cancellations,bookings,2,low,
+54,Booking,Reschedules / date changes,2 date changes,bookings,2,low,
+55,Booking,Seat holds that expired,5 abandoned checkouts,funnel events,3,low,
+56,Booking,App vs web split,96% app,platform,2,low,
+57,Booking,Favourite payment method,UPI 91%,payments,2,medium,
+58,Booking,Tickets booked for someone else,5 tickets for others,passenger details,4,medium,
+59,Seat,Window vs aisle,Window 19 of 23 times,seat layout,5,low,yes
+60,Seat,Upper vs lower berth,Lower berth 80%,seat layout,4,low,
+61,Seat,Most booked seat number,L7 six times,seat numbers,5,low,yes
+62,Seat,Sleeper vs seater,Sleeper 74%,bus type,4,low,
+63,Seat,AC vs non-AC,AC 91%,bus type,3,low,
+64,Seat,Front / middle / back preference,Middle of the bus,seat layout,3,low,
+65,Seat,Single-side sleeper preference,Single sleeper 12 times,seat layout,3,low,
+66,Bus,Favourite operator,Operator X 9 times,bookings,4,low,
+67,Bus,Operators tried,7 operators,bookings,3,low,
+68,Bus,Favourite bus type,Volvo multi-axle sleeper,bus type,4,low,
+69,Bus,Premium-tier bus share,61% of trips,bus tags,3,low,
+70,Bus,Electric bus trips,3 electric rides,bus type,3,low,
+71,Bus,Same vehicle repeat,Rode the same bus 4 times,vehicle number,4,low,
+72,Bus,Government vs private split,2 RTC and 21 private,operator type,3,low,
+73,Bus,Most chosen amenity,Charging point every time,amenities,3,low,
+74,Money,Total spend,Rs 38400,payments,3,high,
+75,Money,Total saved with offers,Rs 4360 saved,discounts,5,low,yes
+76,Money,Savings equivalent,109 cutting chais,derived from savings,5,low,yes
+77,Money,Best single deal,Rs 450 off one ticket,discounts,4,low,
+78,Money,Cheapest ticket,Rs 199,fares,4,low,
+79,Money,Priciest ticket,Rs 2850,fares,3,medium,
+80,Money,Average fare per km,Rs 2.6 per km,fares + distance,3,low,
+81,Money,Coupons used,11 coupons,discounts,3,low,
+82,Money,Wallet cashback earned,Rs 620,wallet,3,low,
+83,Money,Saved vs flying the same routes,Rs 61000 cheaper than flights,fares + flight fare benchmark,4,low,
+84,Punctuality,On-time arrival share,78% on time,live tracking,3,low,
+85,Punctuality,Total delay endured,6 h 20 min of waiting,live tracking,4,low,
+86,Punctuality,Earliest early arrival,Reached 40 min early,live tracking,3,low,
+87,Live tracking,Track-my-bus opens,64 checks,app events,5,low,yes
+88,Live tracking,Tracking link shares,Shared live location 18 times,app events,4,low,
+89,Live tracking,Rest stops made,41 highway stops,GPS stop detection,4,low,
+90,Live tracking,Favourite rest stop,Same dhaba 6 times,GPS stop detection,4,low,
+91,Live tracking,Boarding buffer,Reached 6 min before departure; twice at 0,user location (consent),5,medium,
+92,Companions,Solo vs group split,70% solo,passenger count,4,low,
+93,Companions,Most frequent co-passenger,Travelled with one person 8 times,passenger details,5,high,
+94,Companions,Largest group booked,7 seats in one booking,passenger count,3,low,
+95,Companions,Strangers sat next to,23 seat neighbours,seat map occupancy,3,low,
+96,Companions,People who shared your buses,780 fellow passengers,seat map occupancy,4,low,
+97,Festival,Festival trips,Diwali + Sankranti + Dasara,bookings + festival calendar,5,low,yes
+98,Festival,Festival booking speed,Booked Diwali 31 days ahead,booking timestamps + festival calendar,5,low,
+99,Festival,Long-weekend trips,4 long weekends used,holiday calendar,4,low,
+100,Festival,Season split,Monsoon traveller: 9 trips,departure dates,3,low,
+101,Festival,Trips to hometown,7 trips home,inferred hometown,5,medium,yes
+102,Festival,Birthday or New Year on a bus,Rang in 2026 on a bus,dates + DOB,4,medium,
+103,Festival,Rainy rides,5 rainy nights,weather join,4,low,
+104,Loyalty,Member since,With redBus since 2017,account,4,low,
+105,Loyalty,Lifetime trips and km,96 trips / 58000 km,lifetime bookings,4,low,
+106,Loyalty,Ratings and reviews given,12 ratings,reviews,3,low,
+107,Loyalty,Average rating you give,4.6 stars: generous,reviews,4,low,
+108,Loyalty,Referrals made,3 friends referred,referrals,3,low,
+109,Loyalty,Loyalty / streak progress,Streak completed twice,loyalty programme,3,low,
+110,Loyalty,Insurance opt-in rate,Insured 40% of trips,add-ons,2,low,
+111,Loyalty,Support contacts,2 chats with support,support,1,medium,
+112,Rail,Train trips and km,6 train trips / 3100 km,rail bookings,3,low,
+113,Rail,Waitlists that confirmed,3 waitlists cleared,rail PNR data,4,low,
+114,Rail,Bus vs train split,79% bus,bookings,3,low,
+115,App,App opens,214 opens,app events,2,low,
+116,App,Price or route alerts set,4 alerts,app events,2,low,
+117,App,Language used,Kannada + English,app settings,2,low,
+118,Sustainability,CO2 saved vs driving,412 kg CO2 saved,distance + emission factors,4,low,yes
+119,Sustainability,Tree equivalent,Like planting 19 trees,derived,4,low,
+120,Community,Your city's top getaway,Bengaluru loved Coorg this year,population stats,4,low,
+121,Community,How you compare to your city,2.3x more trips than the average Bengalurean,population stats,4,low,
+122,Combo,Traveller archetype (time x seat x lead time),The Midnight Window Loyalist,36 + 59 + 46,5,low,yes
+123,Combo,Signature trip (route x hour x seat x operator),Fri 10:45 PM / BLR-HYD / L7 window,27 + 37 + 61 + 66,5,low,yes
+124,Combo,Loyalty triangle (same route + operator + seat),Same bus same seat 6 times,27 + 61 + 66,5,low,
+125,Combo,Festival homing instinct (festival x hometown x lead time),Home for every festival; booked a month early,97 + 98 + 101,5,medium,
+126,Combo,Sleep on wheels (night hours x sleeper),About 118 hours asleep on a bus,14 + 36 + 62,5,low,yes
+127,Combo,Dream vs done (searched x booked),Searched 21 places and went to 14,18 + 52,5,low,
+128,Combo,Spontaneity score (lead time x new cities),Spontaneity 87 of 100,20 + 46,4,low,
+129,Combo,Weekend escape index (weekenders x destination type),7 escapes; mostly beaches,24 + 44,4,low,
+130,Combo,Road vs sky (km x cost x CO2 vs flight),Rs 61000 and 412 kg CO2 lighter than flying,83 + 118,4,low,
+131,Combo,Punctuality karma (your buffer x bus delay),You: 6 min early. Bus: 14 min late,85 + 91,4,medium,
+132,Combo,Solo to squad shift (companions over the year),Solo till June; squad after,92 by month,3,low,
+133,Combo,Savings per km,29 paise saved every km,10 + 75,3,low,
+134,Combo,Year heatmap (trips by week),Calendar of 52 weeks,bookings,4,low,
+135,Combo,Map trail (all routes on a map),Every route drawn as one line,route geometry,5,low,yes
+136,Combo,Next-year prediction,We bet you are in Hyderabad by 9 Jan,pattern forecast,5,low,yes
