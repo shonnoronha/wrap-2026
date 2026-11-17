@@ -477,6 +477,55 @@
         "avgLeadDays"
       ]
     },
+    "hotel": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Hotel bookings. null when the user booked no hotels; the HOTEL page is then skipped.",
+      "additionalProperties": false,
+      "properties": {
+        "stays": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Hotel bookings stayed in the year (cancelled excluded)."
+        },
+        "nights": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total nights across those stays."
+        },
+        "cities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "City names the user stayed in."
+        },
+        "topCity": {
+          "type": "string",
+          "description": "City with the most hotel nights."
+        },
+        "comboTrips": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Stays whose check-in city and date match the destination of one of the user's bus or train journeys (within a day of arrival)."
+        },
+        "longestStayNights": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Most nights in a single stay."
+        }
+      },
+      "required": [
+        "stays",
+        "nights",
+        "cities",
+        "topCity",
+        "comboTrips",
+        "longestStayNights"
+      ]
+    },
     "squad": {
       "type": "object",
       "description": "Group bookings.",

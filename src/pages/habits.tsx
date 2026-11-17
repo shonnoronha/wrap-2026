@@ -224,7 +224,8 @@ export function LiveTracking({ page }: { page: PageOf<'LIVE_TRACKING'> }) {
       const q = Math.max(0, Math.min(1, (now - t0) / 5200)), e = q < 0.5 ? 2 * q * q : 1 - 2 * (1 - q) * (1 - q);
       const pt = p.getPointAtLength(L * e);
       pin.current?.setAttribute('transform', `translate(${pt.x} ${pt.y})`);
-      done.current!.style.strokeDashoffset = `${L * (1 - e)}`;
+      if (!done.current) return; // page already unmounted
+      done.current.style.strokeDashoffset = `${L * (1 - e)}`;
       setReached(e >= 0.999 ? 3 : e >= 0.5 ? 2 : e > 0 ? 1 : 0);
       setEta(Math.round(100 * (1 - e)));
       if (q < 1) raf = requestAnimationFrame(step);

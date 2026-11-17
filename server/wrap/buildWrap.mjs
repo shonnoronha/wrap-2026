@@ -7,6 +7,7 @@
 // user (`score`, 0-100) and what it shows (`build`). Pages keep the story
 // order of RULES; only the top-scoring MAX_CONTENT_PAGES content pages are
 // kept, so heavy travellers get the best 12 and light travellers a short wrap.
+// Pinned pages (HOTEL) always make the cut when they apply.
 
 import { CITIES } from '../data/users.mjs';
 
@@ -243,6 +244,26 @@ const RULES = [
     }),
   },
   {
+    type: 'HOTEL', dwellMs: 5000, pinned: true,
+    when: (u) => u.hotel?.stays >= 1,
+    score: (u) => 60 + u.hotel.nights * 2,
+    build: (u, o = {}) => {
+      const h = u.hotel;
+      const cities = h.cities.length;
+      return {
+        data: { stays: h.stays, nights: h.nights, cities: h.cities, topCity: h.topCity, comboTrips: h.comboTrips, longestStayNights: h.longestStayNights },
+        copy: {
+          kicker: 'Checked in',
+          headline: `${plural(h.nights, 'night')} in a bed that didn’t move.`,
+          body: h.stays === 1
+            ? `One stay in ${h.topCity}${h.comboTrips ? ', booked together with your ride' : ''}.`
+            : `${plural(h.stays, 'hotel stay')}${cities === 1 ? `, all in ${h.topCity}` : ` across ${plural(cities, 'city', 'cities')}, most often ${h.topCity}`}.${h.comboTrips ? ` ${h.comboTrips === h.stays ? 'Every time' : plural(h.comboTrips, 'time')}, you booked the ride and the room together.` : ''}`,
+          bubble: 'Finally, a real pillow!',
+        },
+      };
+    },
+  },
+  {
     type: 'EXPLORER', dwellMs: 5000,
     when: (u) => u.newCities?.length >= 3,
     score: (u) => 45 + u.newCities.length * 5,
@@ -390,7 +411,7 @@ export function buildWrap(userId, user, opts = {}) {
   const eligible = RULES.filter((r) => r.when(user));
   const content = eligible.filter((r) => !r.fixed)
     .map((r) => ({ r, s: r.score(user) }))
-    .sort((a, b) => b.s - a.s)
+    .sort((a, b) => Number(!!b.r.pinned) - Number(!!a.r.pinned) || b.s - a.s)
     .slice(0, MAX_CONTENT_PAGES)
     .map((x) => x.r);
   const chosen = eligible.filter((r) => r.fixed || content.includes(r)); // keeps story order

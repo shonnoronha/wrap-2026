@@ -90,7 +90,7 @@ components:
           type: string
           description: Page kind. The shape of `data` depends on it (see PageData*). Unknown values must be skipped by clients.
           enum: [INTRO, FIRST_STEPS, ODOMETER, PEAK_MONTH, TOP_ROUTE, NIGHT_OWL, EARLY_BIRD, SEAT, RAIL, WAITLIST,
-                 LAST_MINUTE, PLANNER, FLEXI, LIVE_TRACKING, HOMEWARD, EXPLORER, SQUAD, SAVINGS, PRIMO, ECO, DREAM,
+                 LAST_MINUTE, PLANNER, FLEXI, LIVE_TRACKING, HOMEWARD, HOTEL, EXPLORER, SQUAD, SAVINGS, PRIMO, ECO, DREAM,
                  PERSONA, SUMMARY]
         dwellMs:
           type: integer
@@ -211,6 +211,16 @@ components:
         from: { type: string }
         to: { type: string }
         stops: { type: array, items: { type: object, properties: { name: { type: string }, time: { type: string } } } }
+    PageDataHOTEL:
+      type: object
+      description: Shown only when the user has at least one hotel stay; never dropped by the page cap.
+      properties:
+        stays: { type: integer, description: Hotel bookings stayed (not cancelled) }
+        nights: { type: integer, description: Total nights across those stays }
+        cities: { type: array, items: { type: string }, description: Cities the user stayed in }
+        topCity: { type: string, description: City with the most nights }
+        comboTrips: { type: integer, description: Stays booked for the destination of one of the user's bus or train journeys }
+        longestStayNights: { type: integer }
     PageDataHOMEWARD:
       type: object
       properties: { tripsHome: { type: integer }, hometown: { type: string }, festivals: { type: array, items: { type: string } }, avgLeadDays: { type: integer } }

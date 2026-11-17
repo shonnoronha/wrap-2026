@@ -64,6 +64,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 @Serializable data class Stop(val name: String, val time: String)
 @Serializable data class LiveTrackingData(val checks: Int, val shares: Int, val onTimePct: Int, val from: String, val to: String, val stops: List<Stop>)
 @Serializable data class HomewardData(val tripsHome: Int, val hometown: String, val festivals: List<String>, val avgLeadDays: Int)
+@Serializable data class HotelData(val stays: Int, val nights: Int, val cities: List<String>, val topCity: String, val comboTrips: Int, val longestStayNights: Int)
 @Serializable data class ExplorerData(val newCities: List<String>, val states: Int)
 @Serializable data class SquadData(val groupBookings: Int, val largestGroup: Int, val seatsBooked: Int)
 @Serializable data class SavingsData(val saved: Int, val chais: Int, val bestDeal: Int, val coupons: Int)
@@ -90,6 +91,6 @@ fun WrapPage.typed(json: Json = Json { ignoreUnknownKeys = true }): TypedPage? =
 
 val KNOWN_TYPES = setOf(
     "INTRO", "FIRST_STEPS", "ODOMETER", "PEAK_MONTH", "TOP_ROUTE", "NIGHT_OWL", "EARLY_BIRD", "SEAT", "RAIL",
-    "WAITLIST", "LAST_MINUTE", "PLANNER", "FLEXI", "LIVE_TRACKING", "HOMEWARD", "EXPLORER", "SQUAD", "SAVINGS",
+    "WAITLIST", "LAST_MINUTE", "PLANNER", "FLEXI", "LIVE_TRACKING", "HOMEWARD", "HOTEL", "EXPLORER", "SQUAD", "SAVINGS",
     "PRIMO", "ECO", "DREAM", "PERSONA", "SUMMARY",
 )

@@ -65,6 +65,7 @@ export interface PageDataMap {
   FLEXI: { dateChanges: number; freeCancellations: number; feesSaved: number; from: string; to: string; dates: string[] };
   LIVE_TRACKING: { checks: number; shares: number; onTimePct: number; from: string; to: string; stops: { name: string; time: string }[] };
   HOMEWARD: { tripsHome: number; hometown: string; festivals: string[]; avgLeadDays: number };
+  HOTEL: { stays: number; nights: number; cities: string[]; topCity: string; comboTrips: number; longestStayNights: number };
   EXPLORER: { newCities: string[]; states: number };
   SQUAD: { groupBookings: number; largestGroup: number; seatsBooked: number };
   SAVINGS: { saved: number; chais: number; bestDeal: number; coupons: number };

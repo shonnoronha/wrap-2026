@@ -47,6 +47,7 @@ export const THEMES: Record<PageType, PageTheme> = {
   FLEXI: blush,
   LIVE_TRACKING: { bg: '#EAF0F6', fg: B.ink, accent: B.red, edge: '#D2DCE8' },
   HOMEWARD: { bg: '#2B1A2E', fg: '#fff', accent: B.gold, edge: '#1C1020' },
+  HOTEL: { bg: '#FFF1E6', fg: B.ink, accent: B.red, edge: '#F3D6C1' },
   EXPLORER: mist,
   SQUAD: { ...blush, bg: B.redSoft, edge: '#F0B4AD' },
   SAVINGS: { bg: '#E7F4EB', fg: B.ink, accent: B.green, edge: '#C3E3CD' },

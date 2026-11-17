@@ -2,6 +2,7 @@ import type { PageType, ShareCard, WrapPage } from '../contract';
 import { Eco, Dream, Primo, Savings } from './money';
 import { Rail, Waitlist } from './rail';
 import { Flexi, Homeward, LastMinute, LiveTracking, Planner, Seat, Squad } from './habits';
+import { Hotel } from './hotel';
 import { Intro, Persona, Summary } from './story';
 import { EarlyBird, Explorer, FirstSteps, NightOwl, Odometer, PeakMonth, TopRoute } from './travel';
 
@@ -25,6 +26,7 @@ const REGISTRY: { [T in PageType]: (props: { page: any; ctx: PageCtx }) => JSX.E
   FLEXI: ({ page }) => <Flexi page={page} />,
   LIVE_TRACKING: ({ page }) => <LiveTracking page={page} />,
   HOMEWARD: ({ page }) => <Homeward page={page} />,
+  HOTEL: ({ page }) => <Hotel page={page} />,
   EXPLORER: ({ page }) => <Explorer page={page} />,
   SQUAD: ({ page }) => <Squad page={page} />,
   SAVINGS: ({ page }) => <Savings page={page} />,

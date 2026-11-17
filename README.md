@@ -54,7 +54,7 @@ document per user per year that the data pipeline produces and the wrap service
 reads by userId. Each field's description says how to compute it. Every block
 is optional; a missing block just means its page isn't shown.
 
-`docs/page-datapoints.csv` lists every data point page by page (92 rows): when
+`docs/page-datapoints.csv` lists every data point page by page (98 rows): when
 the page is shown, its field in the app response, its field in the pipeline
 input, type, unit, an example value, what it drives on screen and how to
 compute it.
@@ -64,19 +64,19 @@ compute it.
 `server/wrap/buildWrap.mjs` has one rule per page type: when it applies, how
 interesting it is for this user (score), and what it shows. INTRO, PERSONA and
 SUMMARY are always present; the 12 highest-scoring content pages are kept, in
-story order.
+story order. HOTEL is pinned: whenever the user has a hotel stay, it is kept.
 
 | Demo user | Pages | Why |
 |---|---|---|
-| `u_aarav` | 15 | Night-bus regular: map, top route, night owl, seat, rail, waitlist, Flexi, tracking, festival trips home |
+| `u_aarav` | 15 | Night-bus regular: map, top route, night owl, seat, waitlist, Flexi, tracking, festival trips home, hotel stays |
 | `u_meera` | 14 | Train lover: early bird, rail, waitlist, planner, explorer, eco |
-| `u_zoya` | 15 | Weekend explorer: new cities, squad trips, dream destination, no rail pages |
-| `u_kabir` | 6 | Only 2 trips: gets "Trip #1" instead of the odometer and peak-month pages |
+| `u_zoya` | 15 | Weekend explorer: hotel stays, new cities, squad trips, dream destination, no rail pages |
+| `u_kabir` | 7 | Only 2 trips: gets "Trip #1" instead of the odometer and peak-month pages, plus his one hotel stay |
 | `u_ghost` | — | No trips, so the API returns 422 |
 
-The 23 page types: INTRO, FIRST_STEPS, ODOMETER (India map with bus and train
+The 24 page types: INTRO, FIRST_STEPS, ODOMETER (India map with bus and train
 routes), PEAK_MONTH, TOP_ROUTE, NIGHT_OWL, EARLY_BIRD, SEAT, RAIL, WAITLIST,
-LAST_MINUTE, PLANNER, FLEXI, LIVE_TRACKING, HOMEWARD, EXPLORER, SQUAD, SAVINGS,
+LAST_MINUTE, PLANNER, FLEXI, LIVE_TRACKING, HOMEWARD, HOTEL, EXPLORER, SQUAD, SAVINGS,
 PRIMO, ECO, DREAM, PERSONA, SUMMARY.
 
 In production the per-user aggregates in `server/data/users.mjs` would come

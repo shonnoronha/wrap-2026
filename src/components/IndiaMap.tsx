@@ -81,7 +81,8 @@ export function IndiaMap({ cities, legs, onProgress, onDone }: { cities: City[];
         if (train && !zoomedOut) { busRef.current?.setAttribute('opacity', '0'); await tween(900, (q) => setBox(mix(busBox, box, io(q)))); zoomedOut = true; }
         setLit((s) => ({ ...s, [leg.from]: (s[leg.from] ?? 0) + 1 }));
         if (!train) busRef.current?.setAttribute('opacity', '1');
-        const vb = svg.current!.viewBox.baseVal, sc = vb.width / W;
+        if (!svg.current) return; // map already unmounted
+        const vb = svg.current.viewBox.baseVal, sc = vb.width / W;
         await tween(train ? 1150 : 700, (q) => {
           const l = L * io(q);
           path.style.strokeDashoffset = `${L - l}`;

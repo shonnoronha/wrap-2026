@@ -5,7 +5,7 @@ import { USERS } from './data/users.mjs';
 import { buildWrap, MAX_CONTENT_PAGES, WrapError } from './wrap/buildWrap.mjs';
 import { validateRequest } from './wrap/validate.mjs';
 
-const KNOWN = new Set(['INTRO', 'FIRST_STEPS', 'ODOMETER', 'PEAK_MONTH', 'TOP_ROUTE', 'NIGHT_OWL', 'EARLY_BIRD', 'SEAT', 'RAIL', 'WAITLIST', 'LAST_MINUTE', 'PLANNER', 'FLEXI', 'LIVE_TRACKING', 'HOMEWARD', 'EXPLORER', 'SQUAD', 'SAVINGS', 'PRIMO', 'ECO', 'DREAM', 'PERSONA', 'SUMMARY']);
+const KNOWN = new Set(['INTRO', 'FIRST_STEPS', 'ODOMETER', 'PEAK_MONTH', 'TOP_ROUTE', 'NIGHT_OWL', 'EARLY_BIRD', 'SEAT', 'RAIL', 'WAITLIST', 'LAST_MINUTE', 'PLANNER', 'FLEXI', 'LIVE_TRACKING', 'HOMEWARD', 'HOTEL', 'EXPLORER', 'SQUAD', 'SAVINGS', 'PRIMO', 'ECO', 'DREAM', 'PERSONA', 'SUMMARY']);
 const noHoles = (v, path) => {
   assert.ok(v !== undefined && !(typeof v === 'number' && Number.isNaN(v)), `missing value at ${path}`);
   if (typeof v === 'string') assert.ok(!/undefined|NaN/.test(v), `bad text at ${path}: ${v}`);
