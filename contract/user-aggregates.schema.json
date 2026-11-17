@@ -1,0 +1,599 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/safarnama/user-aggregates.schema.json",
+  "title": "UserYearAggregates",
+  "description": "Input contract for the wrap service: one document per user per year, produced by the data pipeline and looked up by userId when the app calls POST /api/v1/wrap. Counts cover completed journeys only (cancelled bookings excluded) with departure dates inside the year. Every block is optional: when a block is missing or below its threshold, the page that needs it is simply not shown. cities, legs, monthly, longestGapDays and states are needed as soon as the user has 3 or more trips.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "userId",
+    "year",
+    "firstName",
+    "memberSince",
+    "busTrips",
+    "trainTrips",
+    "totalKm"
+  ],
+  "properties": {
+    "userId": {
+      "type": "string",
+      "description": "Same ID the app sends.",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "year": {
+      "type": "integer",
+      "description": "Wrap year, e.g. 2026."
+    },
+    "firstName": {
+      "type": "string",
+      "description": "Profile first name, shown on the intro and summary."
+    },
+    "memberSince": {
+      "type": "integer",
+      "description": "Year the account was created."
+    },
+    "hometown": {
+      "type": "string",
+      "description": "Home city: profile city, else the most frequent destination during festival windows."
+    },
+    "busTrips": {
+      "type": "integer",
+      "description": "Completed bus journeys in the year.",
+      "minimum": 0
+    },
+    "trainTrips": {
+      "type": "integer",
+      "description": "Completed train journeys in the year.",
+      "minimum": 0
+    },
+    "totalKm": {
+      "type": "integer",
+      "description": "Sum of route distance (km) over all completed bus and train journeys.",
+      "minimum": 0
+    },
+    "states": {
+      "type": "integer",
+      "description": "Distinct Indian states the user's journeys started or ended in.",
+      "minimum": 0
+    },
+    "cities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Distinct city codes the user travelled from or to. Codes must exist in the city master (name, lat, lon)."
+    },
+    "newCities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "City names visited this year and never before in the user's lifetime history."
+    },
+    "legs": {
+      "type": "array",
+      "description": "Distinct city pairs travelled, with mode and trip count. Drawn on the map.",
+      "items": {
+        "type": "object",
+        "description": "One city pair.",
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Origin city code."
+          },
+          "to": {
+            "type": "string",
+            "description": "Destination city code."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "BUS",
+              "TRAIN"
+            ],
+            "description": "Transport mode."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Trips on this pair in either direction.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "mode",
+          "count"
+        ]
+      }
+    },
+    "monthly": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "minItems": 12,
+      "maxItems": 12,
+      "description": "Trips per calendar month, January first."
+    },
+    "longestGapDays": {
+      "type": "integer",
+      "description": "Longest number of days between two consecutive journeys.",
+      "minimum": 0
+    },
+    "firstTrip": {
+      "type": "object",
+      "description": "First journey of the year. Used for users with 1-2 trips.",
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Origin city name."
+        },
+        "to": {
+          "type": "string",
+          "description": "Destination city name."
+        },
+        "date": {
+          "type": "string",
+          "description": "Departure date, e.g. \"12 Sep\"."
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "date"
+      ]
+    },
+    "topRoute": {
+      "type": "object",
+      "description": "Most-travelled city pair.",
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "City name."
+        },
+        "to": {
+          "type": "string",
+          "description": "City name."
+        },
+        "count": {
+          "type": "integer",
+          "description": "Journeys on this pair, either direction.",
+          "minimum": 1
+        },
+        "topPct": {
+          "type": "number",
+          "description": "User's rank among all travellers on this pair by journey count, as a top-N percent (2 = top 2%).",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "count",
+        "topPct"
+      ]
+    },
+    "timing": {
+      "type": "object",
+      "description": "When the user travels.",
+      "additionalProperties": false,
+      "properties": {
+        "nightSharePct": {
+          "type": "integer",
+          "description": "% of journeys departing between 8 PM and 4 AM.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "nights": {
+          "type": "integer",
+          "description": "Journeys that departed on one date and arrived on the next (overnight).",
+          "minimum": 0
+        },
+        "sunrises": {
+          "type": "integer",
+          "description": "Journeys arriving between 5 AM and 7 AM.",
+          "minimum": 0
+        },
+        "usualDeparture": {
+          "type": "string",
+          "description": "Most common departure time, rounded to 15 minutes, e.g. \"10:45 PM\"."
+        },
+        "morningSharePct": {
+          "type": "integer",
+          "description": "% of journeys departing before 9 AM.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "earliestDeparture": {
+          "type": "string",
+          "description": "Earliest departure clock time in the year, e.g. \"4:50 AM\"."
+        }
+      },
+      "required": [
+        "nightSharePct",
+        "nights",
+        "sunrises",
+        "usualDeparture",
+        "morningSharePct",
+        "earliestDeparture"
+      ]
+    },
+    "seat": {
+      "type": "object",
+      "description": "Seat habits (bus).",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Most-booked seat number, e.g. \"L7\"."
+        },
+        "count": {
+          "type": "integer",
+          "description": "Times that seat number was booked.",
+          "minimum": 0
+        },
+        "windowPct": {
+          "type": "integer",
+          "description": "% of booked seats that were window seats, from the seat layout.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "berth": {
+          "type": "string",
+          "enum": [
+            "LOWER",
+            "UPPER",
+            "SEATER"
+          ],
+          "description": "Most common berth type."
+        }
+      },
+      "required": [
+        "label",
+        "count",
+        "windowPct",
+        "berth"
+      ]
+    },
+    "rail": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Train journeys. null when the user took no trains.",
+      "additionalProperties": false,
+      "properties": {
+        "km": {
+          "type": "integer",
+          "description": "Distance travelled by train (km).",
+          "minimum": 0
+        },
+        "longestHours": {
+          "type": "number",
+          "description": "Longest train journey, in hours (one decimal).",
+          "minimum": 0
+        },
+        "topClass": {
+          "type": "string",
+          "description": "Most-booked class, e.g. SL, 3A, 2A, CC."
+        },
+        "waitlistConfirmed": {
+          "type": "integer",
+          "description": "Waitlisted tickets that ended confirmed.",
+          "minimum": 0
+        },
+        "waitlistPath": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Status history of one waitlisted ticket from PNR checks, e.g. [\"WL 14\", \"RAC 2\", \"CNF\"]. Last item should be CNF."
+        },
+        "pnrChecks": {
+          "type": "integer",
+          "description": "PNR status checks made in the app.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "km",
+        "longestHours",
+        "topClass",
+        "waitlistConfirmed",
+        "waitlistPath",
+        "pnrChecks"
+      ]
+    },
+    "booking": {
+      "type": "object",
+      "description": "How far ahead the user books (booking time to departure time).",
+      "additionalProperties": false,
+      "properties": {
+        "minLeadMinutes": {
+          "type": "integer",
+          "description": "Shortest lead time, in minutes.",
+          "minimum": 0
+        },
+        "avgLeadHours": {
+          "type": "number",
+          "description": "Average lead time, in hours (one decimal).",
+          "minimum": 0
+        },
+        "avgLeadDays": {
+          "type": "integer",
+          "description": "Average lead time, in whole days.",
+          "minimum": 0
+        },
+        "earliestDays": {
+          "type": "integer",
+          "description": "Longest lead time, in days.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "minLeadMinutes",
+        "avgLeadHours",
+        "avgLeadDays",
+        "earliestDays"
+      ]
+    },
+    "flexi": {
+      "type": "object",
+      "description": "Flexible-ticket date changes and free cancellations.",
+      "additionalProperties": false,
+      "properties": {
+        "dateChanges": {
+          "type": "integer",
+          "description": "Travel-date changes made on flexible tickets.",
+          "minimum": 0
+        },
+        "freeCancellations": {
+          "type": "integer",
+          "description": "Cancellations with zero cancellation fee.",
+          "minimum": 0
+        },
+        "feesSaved": {
+          "type": "integer",
+          "description": "Cancellation fees waived, in rupees.",
+          "minimum": 0
+        },
+        "from": {
+          "type": "string",
+          "description": "Example changed ticket: origin city name."
+        },
+        "to": {
+          "type": "string",
+          "description": "Example changed ticket: destination city name."
+        },
+        "dates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Example ticket: original date, then each new date, e.g. [\"Fri 14 Mar\", \"Sat 15 Mar\"]."
+        }
+      },
+      "required": [
+        "dateChanges",
+        "freeCancellations",
+        "feesSaved"
+      ]
+    },
+    "tracking": {
+      "type": "object",
+      "description": "Live tracking use.",
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "type": "integer",
+          "description": "Times the user opened live tracking.",
+          "minimum": 0
+        },
+        "shares": {
+          "type": "integer",
+          "description": "Times the user shared their live location.",
+          "minimum": 0
+        },
+        "onTimePct": {
+          "type": "integer",
+          "description": "% of tracked journeys arriving within 15 minutes of schedule (GPS).",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "from": {
+          "type": "string",
+          "description": "Sample tracked trip: boarding point."
+        },
+        "to": {
+          "type": "string",
+          "description": "Sample tracked trip: dropping point."
+        },
+        "stops": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "One point on the sample tracked trip.",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Boarding point, rest stop or dropping point name."
+              },
+              "time": {
+                "type": "string",
+                "description": "Local time at that point, e.g. \"10:45 PM\"."
+              }
+            },
+            "required": [
+              "name",
+              "time"
+            ]
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Sample tracked trip: boarding point, one rest stop, dropping point, with times."
+        }
+      },
+      "required": [
+        "checks",
+        "shares",
+        "onTimePct"
+      ]
+    },
+    "festival": {
+      "type": "object",
+      "description": "Festival travel home.",
+      "additionalProperties": false,
+      "properties": {
+        "tripsHome": {
+          "type": "integer",
+          "description": "Journeys to the hometown inside festival windows (festival calendar join).",
+          "minimum": 0
+        },
+        "festivals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Festivals the user travelled home for."
+        },
+        "avgLeadDays": {
+          "type": "integer",
+          "description": "Average days booked ahead for those trips.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "tripsHome",
+        "festivals",
+        "avgLeadDays"
+      ]
+    },
+    "squad": {
+      "type": "object",
+      "description": "Group bookings.",
+      "additionalProperties": false,
+      "properties": {
+        "groupBookings": {
+          "type": "integer",
+          "description": "Bookings with 2 or more passengers.",
+          "minimum": 0
+        },
+        "largestGroup": {
+          "type": "integer",
+          "description": "Most passengers in one booking.",
+          "minimum": 0
+        },
+        "seatsBooked": {
+          "type": "integer",
+          "description": "Total seats booked in the year.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "groupBookings",
+        "largestGroup",
+        "seatsBooked"
+      ]
+    },
+    "money": {
+      "type": "object",
+      "description": "Savings.",
+      "additionalProperties": false,
+      "properties": {
+        "saved": {
+          "type": "integer",
+          "description": "Total offer discounts plus wallet cashback, in rupees.",
+          "minimum": 0
+        },
+        "bestDeal": {
+          "type": "integer",
+          "description": "Largest discount on a single booking, in rupees.",
+          "minimum": 0
+        },
+        "coupons": {
+          "type": "integer",
+          "description": "Coupons applied.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "saved",
+        "bestDeal",
+        "coupons"
+      ]
+    },
+    "primo": {
+      "type": "object",
+      "description": "Premium (Primo) buses.",
+      "additionalProperties": false,
+      "properties": {
+        "rides": {
+          "type": "integer",
+          "description": "Journeys on Primo-tagged operators.",
+          "minimum": 0
+        },
+        "avgRating": {
+          "type": "number",
+          "description": "Average rating the user gave after trips (0 if none).",
+          "minimum": 0,
+          "maximum": 5
+        }
+      },
+      "required": [
+        "rides",
+        "avgRating"
+      ]
+    },
+    "dream": {
+      "type": "object",
+      "description": "Searched but never booked.",
+      "additionalProperties": false,
+      "properties": {
+        "destination": {
+          "type": "string",
+          "description": "Most-searched destination city with no booking to it this year."
+        },
+        "searches": {
+          "type": "integer",
+          "description": "Searches for that destination.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "destination",
+        "searches"
+      ]
+    },
+    "prediction": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Next-trip guess for the summary. null when there is no pattern.",
+      "additionalProperties": false,
+      "properties": {
+        "destination": {
+          "type": "string",
+          "description": "Predicted next destination."
+        },
+        "by": {
+          "type": "string",
+          "description": "Predicted date, e.g. \"9 Jan\"."
+        }
+      },
+      "required": [
+        "destination",
+        "by"
+      ]
+    }
+  }
+}
