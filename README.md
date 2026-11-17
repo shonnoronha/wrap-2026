@@ -47,6 +47,18 @@ Each page is `{ id, type, dwellMs, copy, data }`:
 Full definitions: `contract/openapi.yaml`, `src/contract.ts` (web) and
 `contract/WrapContract.kt` (Android, kotlinx.serialization).
 
+## Data the pipeline must provide
+
+`contract/user-aggregates.schema.json` (JSON Schema) is the input side: one
+document per user per year that the data pipeline produces and the wrap service
+reads by userId. Each field's description says how to compute it. Every block
+is optional; a missing block just means its page isn't shown.
+
+`docs/page-datapoints.csv` lists every data point page by page (92 rows): when
+the page is shown, its field in the app response, its field in the pipeline
+input, type, unit, an example value, what it drives on screen and how to
+compute it.
+
 ## Which pages a user gets
 
 `server/wrap/buildWrap.mjs` has one rule per page type: when it applies, how
