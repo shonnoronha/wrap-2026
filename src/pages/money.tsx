@@ -48,7 +48,7 @@ export function Savings({ page }: { page: PageOf<'SAVINGS'> }) {
           <Bubble text={page.copy.bubble} delay={2.6} style={{ right: 112, bottom: 80 }} tail="85%" />
         </div>
       }
-      footer={<div className="chips"><Chip icon="cup">{d.chais} chais</Chip><Chip icon="ticket">{d.coupons} coupons</Chip><Chip>Best deal ₹{d.bestDeal}</Chip></div>}
+      footer={<div className="chips"><Chip icon="cup">{d.chais} chais</Chip>{d.coupons != null && <Chip icon="ticket">{d.coupons} coupons</Chip>}<Chip>Best deal ₹{d.bestDeal}</Chip></div>}
     />
   );
 }

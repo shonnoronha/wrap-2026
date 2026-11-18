@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import type { Copy, PageType } from '../contract';
 import { rise, stagger } from '../lib/motion';
-import { THEMES } from '../lib/themes';
+import { THEMES, type PageTheme } from '../lib/themes';
 import { Fit } from './Fit';
 
 /**
@@ -9,11 +9,13 @@ import { Fit } from './Fit';
  * `hero` is the big animated number or word shown above the headline.
  */
 export function PageShell({
-  type, copy, art, hero, footer, textDelay = 0.35,
+  type, copy, art, hero, footer, textDelay = 0.35, theme,
 }: {
   type: PageType; copy: Copy; art?: React.ReactNode; hero?: React.ReactNode; footer?: React.ReactNode; textDelay?: number;
+  /** Overrides the type's theme (a 1.1 variant palette). */
+  theme?: PageTheme;
 }) {
-  const t = THEMES[type];
+  const t = theme ?? THEMES[type];
   return (
     <div className="page" style={{ ['--bg' as string]: t.bg, ['--fg' as string]: t.fg }}>
       <div className="art">{art && <Fit>{art}</Fit>}</div>

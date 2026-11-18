@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useMotionValue, useTransform, type MotionValue
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WrapResponse } from '../contract';
 import { SettleContext } from '../lib/settle';
-import { THEMES } from '../lib/themes';
+import { themeOf } from '../lib/themes';
 import { isKnown, RenderPage } from '../pages/registry';
 
 const HOLD_MS = 220;
@@ -26,9 +26,13 @@ function Segment({ i, index, progress, settled }: { i: number; index: number; pr
  * reports "settled", the reading timer (dwellMs) runs and then the next page opens.
  * Tap right/left to move at any time, hold to pause.
  */
-export function StoryPlayer({ wrap, onClose }: { wrap: WrapResponse; onClose: () => void }) {
+export function StoryPlayer({ wrap, onClose, startAt = 0, hold = false }: {
+  wrap: WrapResponse; onClose: () => void;
+  /** QA: open at this page index and/or never auto-advance (?page=N&hold). */
+  startAt?: number; hold?: boolean;
+}) {
   const pages = useMemo(() => wrap.pages.filter(isKnown), [wrap]);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(Math.max(0, Math.min(startAt, wrap.pages.length - 1)));
   const [dir, setDir] = useState(1);
   const [run, setRun] = useState(0); // bumps on replay so pages remount
   const [settledKey, setSettledKey] = useState<string | null>(null);
@@ -58,7 +62,7 @@ export function StoryPlayer({ wrap, onClose }: { wrap: WrapResponse; onClose: ()
   // Reading timer: only runs once the current page has settled.
   const dwell = page.dwellMs > 0 ? page.dwellMs : 5000;
   useEffect(() => {
-    if (!settled || index === pages.length - 1) return;
+    if (!settled || hold || index === pages.length - 1) return;
     let raf = 0, last = performance.now();
     const tick = (now: number) => {
       const dt = now - last; last = now;
@@ -71,7 +75,7 @@ export function StoryPlayer({ wrap, onClose }: { wrap: WrapResponse; onClose: ()
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [settled, index, pages.length, dwell, progress, go]);
+  }, [settled, hold, index, pages.length, dwell, progress, go]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -91,7 +95,7 @@ export function StoryPlayer({ wrap, onClose }: { wrap: WrapResponse; onClose: ()
   };
   const cancelHold = () => { clearTimeout(holdTimer.current); paused.current = false; };
 
-  const t = THEMES[page.type];
+  const t = themeOf(page);
   const ctx = { share: wrap.share, firstName: wrap.user.firstName, onReplay: () => { setDir(-1); setIndex(0); progress.set(0); setRun((r) => r + 1); } };
 
   return (

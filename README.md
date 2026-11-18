@@ -1,112 +1,197 @@
-# Safarnama 2026 — redBus year-in-travel wrap
+<div align="center">
 
-A working prototype: a mock wrap API plus a React app that plays each user's
-year as animated story pages. The server decides which pages a user sees; the
-app only renders them.
+# 🚌 Wrap 2026
 
-## Run it
+### Your year on the road, replayed one trip at a time.
+
+A year-in-travel story for every redBus traveller: buses, trains and hotels, told in
+animated cards that are **different for every single user**.
+
+<img src="docs/screenshots/01-landing-popup.png" width="230" alt="Wrap popup on the redBus home page" />
+<img src="docs/screenshots/02-top-route-punch-card.png" width="230" alt="Departure board and route punch card" />
+<img src="docs/screenshots/03-train-pnr.png" width="230" alt="PNR slip printing from waitlist to confirmed" />
+
+</div>
+
+---
+
+## ✨ What's inside
+
+| | |
+|---|---|
+| 🎲 **No two wraps alike** | Card mix, order, copy, layout, colours and mascot mood are picked per user. Two travellers with near-identical data still share **zero** headlines. |
+| 🚆 **Bus, train and hotel** | Departure boards, punch cards, PNR slips that climb from WL to CNF, sleeper berths, hotel key cards, lit-up skylines and luggage tags. |
+| 🔢 **Numbers you can trust** | The copy never writes a number itself. Every figure comes from the data through a slot, and the composer rejects anything else. |
+| 🔌 **Real data, safely** | The server fetches each user's row from the data API with a server-side token, adapts it and serves ready-to-draw pages. The app never sees the token. |
+| 📱 **Lands where users already are** | Opens on the redBus mobile home with a "Your 2026 Wrap is here" sheet. |
+
+## 📸 The cards
+
+<table>
+<tr>
+<td align="center"><img src="docs/screenshots/08-train-coaches.png" width="200" /><br/><sub><b>Train · coaches</b><br/>a stat on every coach</sub></td>
+<td align="center"><img src="docs/screenshots/05-train-berth.png" width="200" /><br/><sub><b>Train · berth</b><br/>your berth lights up</sub></td>
+<td align="center"><img src="docs/screenshots/03-train-pnr.png" width="200" /><br/><sub><b>Train · PNR slip</b><br/>WL → RAC → CNF</sub></td>
+<td align="center"><img src="docs/screenshots/04-hotel-keycard.png" width="200" /><br/><sub><b>Hotel · key card</b><br/>the door swings open</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/09-hotel-skyline.png" width="200" /><br/><sub><b>Hotel · skyline</b><br/>one window per night</sub></td>
+<td align="center"><img src="docs/screenshots/06-hotel-luggage.png" width="200" /><br/><sub><b>Hotel · luggage</b><br/>a tag for every city</sub></td>
+<td align="center"><img src="docs/screenshots/02-top-route-punch-card.png" width="200" /><br/><sub><b>Top route</b><br/>departure board + punch card</sub></td>
+<td align="center"><img src="docs/screenshots/07-top-route-passport.png" width="200" /><br/><sub><b>Top route · passport</b><br/>routes as stamps</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/10-rhythm-weeks.png" width="200" /><br/><sub><b>Rhythm</b><br/>52 weeks at a glance</sub></td>
+<td align="center"><img src="docs/screenshots/11-places-passport.png" width="200" /><br/><sub><b>Places</b><br/>cities as passport stamps</sub></td>
+<td align="center"><img src="docs/screenshots/12-persona.png" width="200" /><br/><sub><b>Persona</b><br/>your travel personality</sub></td>
+<td align="center"><img src="docs/screenshots/01-landing-popup.png" width="200" /><br/><sub><b>Landing</b><br/>the Wrap is waiting</sub></td>
+</tr>
+</table>
+
+## 🚀 Run it
 
 ```bash
 npm install
-npm run dev          # API on :8787 and web app on :5173 (Vite proxies /api)
+npm run dev        # API on :8787 + web app on :5173
 ```
 
-Open http://localhost:5173 and pick a demo traveller, or open
-http://localhost:5173/?mascots to review every mascot mood.
+Then open **http://localhost:5173/?rbUserId=1**. The redBus home loads, the Wrap sheet
+slides up, and "Open my Wrap" plays it.
 
-Other scripts: `npm run test:api` checks the page rules against every seeded
-user; `npm start` builds the app and serves app + API from one Node process on
-:8787.
+| Try | What you get |
+|---|---|
+| `/?rbUserId=1` · `2` · `3` | **Rohan, Priya, Dev**: full wraps with bus, train *and* hotel cards |
+| `/?rbUserId=42` | Any ID up to 400: a dummy traveller generated from the ID (same ID, same wrap) |
+| `/?rbUserId=11` … `14` | Classic demo wraps (Aarav, Meera, Zoya, Kabir) |
+| `/?rbUserId=15` | No trips this year (422 screen) |
+| `/?rbUserId=401` | User not found (404 screen) |
+| `/?picker` | Dummy-user picker |
+| `/?rbUserId=1&page=7&hold` | QA: jump to a card and pause auto-advance |
 
-## The API contract
+### Meet the showcase travellers
 
-One call. The request carries only the user ID:
+| | Bus | Train | Hotel |
+|---|---|---|---|
+| **1 · Rohan** | Bengaluru ⇄ Hyderabad night commuter, 26 trips | 6 journeys, a WL 9 → CNF climb | 5 nights in Hyderabad and Chennai |
+| **2 · Priya** | Rohan's near-twin, 24 trips | 9 journeys, sleeps on the side upper | 9 nights across Goa, Puducherry, Chennai |
+| **3 · Dev** | Pune weekend wanderer, 13 trips, 9 cities | 4 journeys, Mumbai ⇄ Pune in CC | 11 nights across 4 cities |
+
+Rohan and Priya have almost the same bus data, and still get different openings, orders, copy and looks.
+
+## 🎲 How every wrap becomes unique
+
+```
+data API row ──▶ adapter ──▶ composer ──────────────────────────────▶ WrapResponse ──▶ app
+ (69 columns)   facts.mjs    1. eligible cards (thresholds, nulls)      ordered pages,
+                             2. score + seeded jitter                   copy, numbers,
+                             3. pick a varied deck (no repeat families) variant per page
+                             4. variant per card: framing × copy × layout
+                             5. personalised order + palette + mascot mood
+                             6. fill {slots}, reject numbers not from data
+```
+
+- **Seeded by `rb_user_id`.** The same user always gets the same wrap, and different users get different ones.
+- **Balanced across a batch.** Users who share a card read different words first, then see a different look.
+- **Tested.** `npm run test:variety` runs 8,800+ checks: decks are deterministic and well formed, no layout repeats inside a deck, every layout has data to draw, real-API quirks are handled, and 150 generated users all come out valid.
+
+The design behind it is in [`docs/card-variations-design.md`](docs/card-variations-design.md).
+
+## 🔌 Data
+
+- **Bus:** the data serving API returns one 69-column row per user
+  (`GET {WRAP_DATA_API_URL}/wrap/{rb_user_id}`, bearer token). The server fetches it,
+  adapts it in [`server/wrap/facts.mjs`](server/wrap/facts.mjs), composes the wrap and caches it for 10 minutes.
+  - **Adapter handles:** route formats, city spellings (Bangalore/Bengaluru),
+    `(area)` names, ISO dates, nullable columns, the six archetypes and the week-number heatmap.
+- **Train and hotel:** *proposed*. No feed exists yet, so they come from
+  [`server/data/dummyExtras.mjs`](server/data/dummyExtras.mjs). That file also defines the fields a future feed should provide.
+- **Contract:** [`contract/india_bus_wrap_2026.table.json`](contract/india_bus_wrap_2026.table.json) is the table definition.
+  `npm run gen:contract` regenerates the `PipelineRow` schema and the column types from it,
+  and the server logs any drift in real rows.
+
+```bash
+cp .env.example .env     # WRAP_DATA_API_URL + WRAP_DATA_API_TOKEN (server-side only, gitignored)
+```
+
+IDs up to 400 are dummy users; anything above goes to the real API (`WRAP_DUMMY_MAX_ID=0` sends everything).
+
+## 📜 The API
 
 ```http
 POST /api/v1/wrap
-{"userId": "u_aarav"}
+{"userId": 42}
 ```
 
 | Status | When |
 |---|---|
 | 200 | The wrap: `user`, ordered `pages[]`, `share` card |
-| 400 | Body isn't exactly `{"userId": "<1-64 of A-Z a-z 0-9 _ ->"}` |
-| 404 | Unknown user |
-| 422 | User has no trips this year (app shows a "no trips yet" screen) |
+| 400 | Body isn't exactly `{"userId": <positive integer>}` |
+| 404 | No such user |
+| 422 | No trips this year |
+| 502 | The data API is down or rejected the token |
 
-Each page is `{ id, type, dwellMs, copy, data }`:
+Each page is `{ id, type, dwellMs, copy, data, variant }`:
+- **`type`** picks the renderer. Unknown types are skipped, so new cards can ship server-first.
+- **`variant.layout`** picks the look.
+- **`dwellMs`** starts only after the animation reports it has finished.
 
-- `type` picks the renderer. Clients skip types they don't know, so new pages
-  can ship from the server first.
-- `copy` (kicker, headline, body, mascot bubble) is written on the server, so it
-  can be localised or A/B tested without an app release.
-- `data` holds the numbers that drive the animation.
-- `dwellMs` is reading time. The app starts it only after the page reports its
-  animation has finished, so auto-advance never cuts an animation off.
+Specs: [`contract/openapi.yaml`](contract/openapi.yaml) (browse it at `/api/docs`),
+[`src/contract.ts`](src/contract.ts) and [`contract/WrapContract.kt`](contract/WrapContract.kt).
 
-Full definitions: `contract/openapi.yaml`, `src/contract.ts` (web) and
-`contract/WrapContract.kt` (Android, kotlinx.serialization).
+## 🧰 Scripts
 
-## Data the pipeline must provide
+| Command | Does |
+|---|---|
+| `npm run dev` | Dummy API + Vite dev server |
+| `npm start` | Build, compose, serve app + API on :8787 |
+| `npm run compose` | Batch-compose the stored wraps |
+| `npm run test:variety` | Uniqueness, determinism and data-quirk checks |
+| `npm run test:api` | Request validation and classic page rules |
+| `npm run gen:contract` | Regenerate the row contract from the table definition |
+| `npm run docker:build` | Build the app and a small runtime image (`wrap-2026`) |
 
-`contract/user-aggregates.schema.json` (JSON Schema) is the input side: one
-document per user per year that the data pipeline produces and the wrap service
-reads by userId. Each field's description says how to compute it. Every block
-is optional; a missing block just means its page isn't shown.
-
-`docs/page-datapoints.csv` lists every data point page by page (98 rows): when
-the page is shown, its field in the app response, its field in the pipeline
-input, type, unit, an example value, what it drives on screen and how to
-compute it.
-
-## Which pages a user gets
-
-`server/wrap/buildWrap.mjs` has one rule per page type: when it applies, how
-interesting it is for this user (score), and what it shows. INTRO, PERSONA and
-SUMMARY are always present; the 12 highest-scoring content pages are kept, in
-story order. HOTEL is pinned: whenever the user has a hotel stay, it is kept.
-
-| Demo user | Pages | Why |
-|---|---|---|
-| `u_aarav` | 15 | Night-bus regular: map, top route, night owl, seat, waitlist, Flexi, tracking, festival trips home, hotel stays |
-| `u_meera` | 14 | Train lover: early bird, rail, waitlist, planner, explorer, eco |
-| `u_zoya` | 15 | Weekend explorer: hotel stays, new cities, squad trips, dream destination, no rail pages |
-| `u_kabir` | 7 | Only 2 trips: gets "Trip #1" instead of the odometer and peak-month pages, plus his one hotel stay |
-| `u_ghost` | — | No trips, so the API returns 422 |
-
-The 24 page types: INTRO, FIRST_STEPS, ODOMETER (India map with bus and train
-routes), PEAK_MONTH, TOP_ROUTE, NIGHT_OWL, EARLY_BIRD, SEAT, RAIL, WAITLIST,
-LAST_MINUTE, PLANNER, FLEXI, LIVE_TRACKING, HOMEWARD, HOTEL, EXPLORER, SQUAD, SAVINGS,
-PRIMO, ECO, DREAM, PERSONA, SUMMARY.
-
-In production the per-user aggregates in `server/data/users.mjs` would come
-from the datapilot pipelines instead of seed data.
-
-## Code map
+## 🗺️ Code map
 
 ```
-contract/            OpenAPI spec and Kotlin data classes
-server/              Mock API, page rules, self-test
-src/contract.ts      TypeScript contract
-src/components/      StoryPlayer, Mascot, IndiaMap, effects, Fit (scales art to any phone)
-src/pages/           One component per page type; registry.tsx maps type -> component
-src/lib/             Theme (redBus colours), motion presets, settle signal, API client
+contract/                OpenAPI spec, Kotlin data classes, table definition
+server/wrap/facts.mjs    adapter: data API row → facts
+server/wrap/cards.mjs    the variant library: every card, framing, copy and layout
+server/wrap/compose.mjs  the composer: select, assign, order, fill, check
+server/wrap/dataApi.mjs  data API client (server-side token, cache)
+server/data/             sample rows, dummy generators, city coordinates
+src/landing/             redBus home replica + Wrap popup
+src/pages/               renderers: topRoute, train, stay, insight, classic pages
 ```
 
-## Moving the animations to Rive
+## 🐳 Deploy
+
+```bash
+npm run docker:build
+docker run -d --name wrap-2026 -p 3000:3000 --env-file .env wrap-2026
+```
+
+The image only holds the built app and the server, which uses Node built-ins and has no npm
+dependencies. The `.env` file is passed in at run time and never baked into the image.
+
+On a host without Docker but with k3s, load the image into its own containerd namespace
+and run it there. No Kubernetes objects are created:
+
+```bash
+sudo k3s ctr -n wrap images import --platform linux/arm64 wrap-2026-image.tar
+sudo systemctl restart wrap-2026      # unit runs: k3s ctr -n wrap run --net-host --env-file … wrap-2026
+```
+
+Build the image on a laptop if npm inside Docker can't reach the registry (for example behind HTTPS inspection).
+
+## 🎬 Moving the animations to Rive
 
 Each page component is a reference for one Rive artboard:
+- **Numbers:** values in `data` become state-machine inputs.
+- **Text:** `copy` stays native, so it localises without new Rive files.
+- **Settling:** when the state machine reaches its end state, fire the same
+  "settled" signal as `src/lib/settle.ts`, then start the `dwellMs` timer.
 
-- Numbers in `data` become state-machine inputs (for example ODOMETER's
-  `totalKm`, SEAT's `seatLabel`, WAITLIST's `path`).
-- Text from `copy` stays native, so it localises without new Rive files.
-- When the state machine reaches its end state, fire the same "settled" signal
-  the web player uses (`src/lib/settle.ts`); start `dwellMs` after it.
-- The mascot (Chhotu, and Rani for rail) needs one artboard with a `mood` input:
-  happy, wow, cheeky, love, cool, sleepy, sad; plus a white livery for red pages.
+---
 
-## Notes
-
-- The India outline is a simplified hand-drawn shape. Replace it with redBus's
-  approved map asset before anything goes outside the team.
-- All numbers are sample data.
+<sub>All travellers and numbers in this repo are sample data. The India outline is a
+simplified shape; swap in the approved map asset before anything leaves the team.</sub>

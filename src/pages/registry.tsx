@@ -1,12 +1,16 @@
-import type { PageType, ShareCard, WrapPage } from '../contract';
+import type { InsightType, PageOf, PageType, ShareCard, WrapPage } from '../contract';
 import { Eco, Dream, Primo, Savings } from './money';
 import { Rail, Waitlist } from './rail';
 import { Flexi, Homeward, LastMinute, LiveTracking, Planner, Seat, Squad } from './habits';
 import { Hotel } from './hotel';
+import { Insight } from './insight';
+import { Train } from './train';
+import { Stay } from './stay';
 import { Intro, Persona, Summary } from './story';
-import { EarlyBird, Explorer, FirstSteps, NightOwl, Odometer, PeakMonth, TopRoute } from './travel';
+import { EarlyBird, Explorer, FirstSteps, NightOwl, Odometer, PeakMonth } from './travel';
+import { TopRoute } from './topRoute';
 
-export interface PageCtx { share: ShareCard; firstName: string; onReplay: () => void }
+export interface PageCtx { share: ShareCard; firstName: string | null; onReplay: () => void }
 
 // One renderer per page type. Types the server sends that are missing here are skipped.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,11 +39,25 @@ const REGISTRY: { [T in PageType]: (props: { page: any; ctx: PageCtx }) => JSX.E
   DREAM: ({ page }) => <Dream page={page} />,
   PERSONA: ({ page }) => <Persona page={page} />,
   SUMMARY: ({ page, ctx }) => <Summary page={page} share={ctx.share} firstName={ctx.firstName} onReplay={ctx.onReplay} />,
+  TRAIN: ({ page }) => <Train page={page} />,
+  HOTEL_STAY: ({ page }) => <Stay page={page} />,
+  STREAK: ({ page }) => <Insight page={page} />,
+  RHYTHM: ({ page }) => <Insight page={page} />,
+  OPERATOR: ({ page }) => <Insight page={page} />,
+  GROWTH: ({ page }) => <Insight page={page} />,
+  EXTREMES: ({ page }) => <Insight page={page} />,
+  PLACES: ({ page }) => <Insight page={page} />,
+  SIGNATURE: ({ page }) => <Insight page={page} />,
+  FIRST_AND_LAST: ({ page }) => <Insight page={page} />,
 };
 
 export const isKnown = (p: { type: string }): p is WrapPage => p.type in REGISTRY;
 
 export function RenderPage({ page, ctx }: { page: WrapPage; ctx: PageCtx }) {
+  // A classic page drawn with an insight layout (1.1): same copy, insight visual.
+  if (page.variant && page.variant.layout !== 'default' && page.data.insight) {
+    return <Insight page={{ ...page, data: page.data.insight } as unknown as PageOf<InsightType>} />;
+  }
   const C = REGISTRY[page.type];
   return <C page={page} ctx={ctx} />;
 }

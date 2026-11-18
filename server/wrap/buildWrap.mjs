@@ -4,12 +4,14 @@
 // animation has finished, so a long animation never gets cut off.
 //
 // Each rule says when a page applies (`when`), how interesting it is for this
-// user (`score`, 0-100) and what it shows (`build`). Pages keep the story
-// order of RULES; only the top-scoring MAX_CONTENT_PAGES content pages are
-// kept, so heavy travellers get the best 12 and light travellers a short wrap.
-// Pinned pages (HOTEL) always make the cut when they apply.
+// user (`score`, 0-100) and what it shows (`build`). Only the top-scoring
+// MAX_CONTENT_PAGES content pages are kept, so heavy travellers get the best 12
+// and light travellers a short wrap. Pinned pages (HOTEL) always make the cut.
+// The order is personalised per user (seeded.mjs: orderDeck): the wrap opens with
+// one of the user's top cards, and no two neighbours share a stat family.
 
 import { CITIES } from '../data/users.mjs';
+import { orderDeck } from './seeded.mjs';
 
 export const YEAR = 2026;
 export const MAX_CONTENT_PAGES = 12;
@@ -20,6 +22,15 @@ const trips = (u) => u.busTrips + u.trainTrips;
 const plural = (x, one, many = one + 's') => `${n(x)} ${x === 1 ? one : many}`;
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+const ORDER_SALT = 'wrap-2026-v1';
+/** Stat families for ordering: neighbours never share one. */
+const FAMILY = {
+  FIRST_STEPS: 'Origin', ODOMETER: 'Distance', PEAK_MONTH: 'Rhythm', TOP_ROUTE: 'Routes', NIGHT_OWL: 'Time', EARLY_BIRD: 'Time',
+  SEAT: 'Comfort', RAIL: 'Rail', WAITLIST: 'Rail', LAST_MINUTE: 'Booking', PLANNER: 'Booking', FLEXI: 'Booking',
+  LIVE_TRACKING: 'Comfort', HOMEWARD: 'Story', HOTEL: 'Stay', EXPLORER: 'Places', SQUAD: 'Comfort', SAVINGS: 'Money',
+  PRIMO: 'Comfort', ECO: 'Planet', DREAM: 'Places',
+};
+
 const RULES = [
   {
     type: 'INTRO', fixed: true, dwellMs: 4000,
@@ -27,7 +38,7 @@ const RULES = [
     build: (u, o = {}) => ({
       data: { year: YEAR, totalTrips: trips(u) },
       copy: {
-        kicker: `Safarnama ${YEAR}`,
+        kicker: `Wrap ${YEAR}`,
         headline: `${u.firstName}, your year on the road is ready.`,
         body: trips(u) <= 2 ? 'Short year, good start. Let’s look.' : `${plural(trips(u), 'trip')}. Let’s relive the good bits.`,
         bubble: 'Honk honk! Hop on.',
@@ -367,7 +378,7 @@ const RULES = [
     build: (u, o = {}) => ({
       data: { stats: shareStats(u), ...(u.prediction ? { prediction: u.prediction } : {}) },
       copy: {
-        kicker: `Safarnama ${YEAR}`,
+        kicker: `Wrap ${YEAR}`,
         headline: 'Your ticket for the year',
         body: u.prediction ? `We bet you’re in ${u.prediction.destination} by ${u.prediction.by}.` : 'See you on the road next year.',
         bubble: 'Share it!',
@@ -412,9 +423,11 @@ export function buildWrap(userId, user, opts = {}) {
   const content = eligible.filter((r) => !r.fixed)
     .map((r) => ({ r, s: r.score(user) }))
     .sort((a, b) => Number(!!b.r.pinned) - Number(!!a.r.pinned) || b.s - a.s)
-    .slice(0, MAX_CONTENT_PAGES)
-    .map((x) => x.r);
-  const chosen = eligible.filter((r) => r.fixed || content.includes(r)); // keeps story order
+    .slice(0, MAX_CONTENT_PAGES);
+  const ordered = orderDeck(content.map((x) => ({ type: x.r.type, family: FAMILY[x.r.type], score: x.s, lead: x.r.type === 'FIRST_STEPS', r: x.r })), { seedId: userId, salt: ORDER_SALT })
+    .map((d) => d.r);
+  const fixed = (where) => eligible.filter((r) => r.fixed && (where === 'start' ? r.type === 'INTRO' : r.type !== 'INTRO'));
+  const chosen = [...fixed('start'), ...ordered, ...fixed('end')];
 
   const pages = chosen.map((r) => ({ id: r.type.toLowerCase().replace(/_/g, '-'), type: r.type, dwellMs: r.dwellMs, ...r.build(user, opts) }));
   const p = persona(user);
