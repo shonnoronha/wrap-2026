@@ -11,17 +11,22 @@
 // In production mode it also serves the built web app from dist/.
 
 import http from 'node:http';
-import { readdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WrapError } from './wrap/buildWrap.mjs';
 import { dummyWrap } from './wrap/dummyApi.mjs';
 import { dataApiConfigured, dataApiLabel, realWrap } from './wrap/dataApi.mjs';
 import { validateRequest } from './wrap/validate.mjs';
+import { composeBatch, getPicks, layoutsOfCard, setPicks, variantGallery } from './wrap/compose.mjs';
+import { CARDS } from './wrap/cards.mjs';
+import { PROFILES, ROWS } from './data/rows.mjs';
+import { dummyProfile, dummyRow } from './data/dummyRows.mjs';
 
 const PORT = Number(process.env.API_PORT || 8787);
 const WRAPS = fileURLToPath(new URL('./data/wraps/', import.meta.url));
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
+const PICKS_FILE = fileURLToPath(new URL('./wrap/selection.mjs', import.meta.url));
 const SPEC = fileURLToPath(new URL('../contract/openapi.yaml', import.meta.url));
 const SWAGGER = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14';
 const DOCS_HTML = `<!doctype html>
@@ -44,9 +49,9 @@ const send = (res, status, body) => {
 };
 const fail = (res, status, code, message) => send(res, status, { error: { code, message } });
 
-async function readJson(req) {
+async function readJson(req, max = 4096) {
   let raw = '';
-  for await (const chunk of req) { raw += chunk; if (raw.length > 4096) throw new WrapError(400, 'BAD_REQUEST', 'Body too large'); }
+  for await (const chunk of req) { raw += chunk; if (raw.length > max) throw new WrapError(400, 'BAD_REQUEST', 'Body too large'); }
   try { return JSON.parse(raw || 'null'); } catch { throw new WrapError(400, 'BAD_REQUEST', 'Body must be JSON'); }
 }
 
@@ -59,6 +64,48 @@ for (const file of await readdir(WRAPS).catch(() => [])) {
 }
 
 const DUMMY_MAX_ID = Number(process.env.WRAP_DUMMY_MAX_ID ?? 400);
+
+// ───────── variant gallery (/?gallery) ─────────
+// Sample users to draw each card with: the showcase users first, then generated ones
+// until every layout has someone who qualifies for it.
+const GALLERY_SAMPLES = [
+  ...Object.keys(ROWS).map((k) => ({ userId: Number(k), row: ROWS[k], profile: PROFILES[k] })),
+  ...Array.from({ length: 80 }, (_, i) => ({ userId: 4 + i, row: dummyRow(4 + i), profile: dummyProfile(4 + i) })),
+];
+/** Only a browser on this machine may change the picks (the deployed server shows them read-only). */
+const isLocal = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+
+function checkPicks(body) {
+  const picks = body?.picks;
+  if (!picks || typeof picks !== 'object' || Array.isArray(picks)) throw new WrapError(400, 'BAD_REQUEST', 'Send {"picks": {"CARD_TYPE": ["layout", ...]}}');
+  const out = {};
+  for (const [type, layouts] of Object.entries(picks)) {
+    const card = CARDS.find((c) => c.type === type);
+    if (!card) throw new WrapError(400, 'BAD_REQUEST', `Unknown card ${type}`);
+    if (!Array.isArray(layouts)) throw new WrapError(400, 'BAD_REQUEST', `${type}: picks must be a list of layouts`);
+    const known = layoutsOfCard(card);
+    const bad = layouts.filter((l) => !known.includes(l));
+    if (bad.length) throw new WrapError(400, 'BAD_REQUEST', `${type}: unknown layout ${bad.join(', ')} (has ${known.join(', ')})`);
+    if (layouts.length) out[type] = [...new Set(layouts)];
+  }
+  return out;
+}
+
+async function savePicks(picks) {
+  const body = Object.keys(picks).length
+    ? `{\n${Object.entries(picks).map(([t, ls]) => `  ${t}: [${ls.map((l) => `'${l}'`).join(', ')}],`).join('\n')}\n}`
+    : '{}';
+  const src = await readFile(PICKS_FILE, 'utf8');
+  await writeFile(PICKS_FILE, src.replace(/export const PICKS = [\s\S]*;\s*$/, `export const PICKS = ${body};\n`));
+  setPicks(picks);
+  // Recompose the stored showcase wraps so they follow the new picks straight away.
+  const batch = composeBatch(GALLERY_SAMPLES.slice(0, Object.keys(ROWS).length));
+  await mkdir(WRAPS, { recursive: true });
+  for (const [id, doc] of Object.entries(batch)) {
+    STORED[id] = doc.wrap;
+    await writeFile(join(WRAPS, `${id}.json`), JSON.stringify(doc, null, 2));
+  }
+}
 
 /** Dummy users first, then the real data API (when configured). */
 async function getWrap(userId) {
@@ -76,6 +123,16 @@ const server = http.createServer(async (req, res) => {
       const wrap = await getWrap(userId);
       await new Promise((r) => setTimeout(r, LATENCY_MS));
       return send(res, 200, wrap);
+    }
+    if (url.pathname === '/api/v1/variants' && req.method === 'GET') {
+      return send(res, 200, { picks: getPicks(), editable: isLocal(req), cards: variantGallery(GALLERY_SAMPLES) });
+    }
+    if (url.pathname === '/api/v1/variants/picks') {
+      if (req.method !== 'PUT') return fail(res, 405, 'BAD_REQUEST', 'Use PUT');
+      if (!isLocal(req)) return fail(res, 403, 'BAD_REQUEST', 'Picks can only be changed from localhost');
+      const picks = checkPicks(await readJson(req, 32768));
+      await savePicks(picks);
+      return send(res, 200, { picks });
     }
     if (url.pathname === '/api/v1/health') return send(res, 200, { ok: true });
     if (url.pathname === '/api/openapi.yaml') {

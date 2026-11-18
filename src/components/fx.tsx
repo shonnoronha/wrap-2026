@@ -1,6 +1,7 @@
 import { animate, motion, useAnimationControls, type MotionStyle } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { spring } from '../lib/motion';
+import { useSfx, useSfxAt } from '../lib/sound';
 
 const fmt = (n: number, decimals = 0) =>
   n.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -15,17 +16,25 @@ export function CountUp({
   const [v, setV] = useState(from);
   const [done, setDone] = useState(false);
   const controls = useAnimationControls();
+  const sfx = useSfx();
   useEffect(() => {
+    let last = from;
     const a = animate(from, to, {
       duration, delay, ease: [0.16, 1, 0.3, 1],
-      onUpdate: setV,
+      onUpdate: (x) => {
+        setV(x);
+        // A tick each time the shown number moves on, rising in pitch as it nears the end.
+        if (Math.round(x) !== Math.round(last)) sfx('tick', to === from ? 1 : (x - from) / (to - from));
+        last = x;
+      },
       onComplete: () => {
         setDone(true);
+        sfx('ding');
         controls.start({ scale: [1, 1.22, 0.94, 1], rotate: [0, -3, 2, 0], transition: { duration: 0.5 } });
       },
     });
     return () => a.stop();
-  }, [to, from, duration, delay, controls]);
+  }, [to, from, duration, delay, controls, sfx]);
   return (
     <motion.p className={className} animate={controls} style={{ position: 'relative' }}>
       {prefix}{grouping ? fmt(v, decimals) : Math.round(v)}{suffix}
@@ -36,6 +45,7 @@ export function CountUp({
 
 /** Radial burst of stars and dots, played once. */
 export function Burst({ color = '#FFC24B', count = 10, radius = 70, x = '30%', y = '50%' }: { color?: string; count?: number; radius?: number; x?: string; y?: string }) {
+  useSfxAt([0, 'sparkle']);
   const parts = useMemo(() => Array.from({ length: count }, (_, i) => {
     const a = (i / count) * Math.PI * 2 + Math.random() * 0.4;
     const r = radius * (0.7 + Math.random() * 0.5);
@@ -61,6 +71,7 @@ export function Burst({ color = '#FFC24B', count = 10, radius = 70, x = '30%', y
 
 /** Falling confetti over the whole page. */
 export function Confetti({ count = 46, delay = 0.6 }: { count?: number; delay?: number }) {
+  useSfxAt([delay, 'fanfare']);
   const colors = ['#FFC24B', '#38b6ff', '#4cc75a', '#ff5da2', '#fff', '#8b5cf6'];
   const bits = useMemo(() => Array.from({ length: count }, (_, i) => ({
     left: Math.random() * 100, d: delay + Math.random() * 1.2, dur: 2.2 + Math.random() * 1.6,
@@ -83,6 +94,7 @@ export function Confetti({ count = 46, delay = 0.6 }: { count?: number; delay?: 
 
 /** Mascot speech bubble. Pops from its tail. */
 export function Bubble({ text, delay = 1.2, style, tail = '20%' }: { text?: string; delay?: number; style?: MotionStyle; tail?: string }) {
+  useSfxAt([delay + 0.05, 'blip']);
   if (!text) return null;
   return (
     <motion.div
@@ -99,6 +111,7 @@ export function Bubble({ text, delay = 1.2, style, tail = '20%' }: { text?: stri
 
 /** Pops a child in with a bouncy spring after a delay. */
 export function Pop({ children, delay = 0, style, className }: { children: React.ReactNode; delay?: number; style?: MotionStyle; className?: string }) {
+  useSfxAt([delay + 0.04, 'pop', Math.min(1, delay / 2)]);
   return (
     <motion.div className={className} style={style} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ ...spring.pop, delay }}>
       {children}

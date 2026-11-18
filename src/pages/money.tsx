@@ -9,8 +9,10 @@ import { spring } from '../lib/motion';
 import { useSettleAfter } from '../lib/settle';
 import { NAMES } from '../lib/brand';
 import { THEMES } from '../lib/themes';
+import { useSfxAt } from '../lib/sound';
 
 export function Savings({ page }: { page: PageOf<'SAVINGS'> }) {
+  useSfxAt([0.6, 'coin']);
   const d = page.data;
   useSettleAfter(3600);
   const coins = useMemo(() => Array.from({ length: 9 }, (_, i) => ({ x: 170 + ((i * 37) % 60), d: 0.4 + i * 0.22 })), []);

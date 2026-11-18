@@ -9,6 +9,7 @@ import { NAMES } from '../lib/brand';
 import { spring } from '../lib/motion';
 import { useSettleAfter } from '../lib/settle';
 import { BRAND, themeOf, type PageTheme } from '../lib/themes';
+import { useSfx, useSfxAt } from '../lib/sound';
 
 /**
  * TRAIN: the year on rails, in three looks picked per user by `variant.layout`:
@@ -46,6 +47,7 @@ function Coaches({ page, t }: { page: Page; t: PageTheme }) {
   const x = useMotionValue(460);
   const sleepers = useTransform(x, (v) => `${(v * 1.0) % 40}px`);
   const [stopped, setStopped] = useState(false);
+  useSfxAt([[0.15, 'trainHorn'], [0.3, 'chug']]);
   useEffect(() => {
     const a = animate(x, 0, { duration: 2.1, ease: [0.12, 0.9, 0.3, 1], delay: 0.3, onComplete: () => setStopped(true) });
     return () => a.stop();
@@ -100,6 +102,9 @@ function Pnr({ page, t }: { page: Page; t: PageTheme }) {
     return () => ids.forEach(clearTimeout);
   }, [steps]);
   const done = shown === steps.length;
+  const sfx = useSfx();
+  useSfxAt([0.3, 'print']);
+  useEffect(() => { if (shown) sfx(steps[shown - 1] === 'CNF' ? 'thud' : 'tick', shown / steps.length); }, [shown, steps, sfx]);
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       {/* printer */}
@@ -146,6 +151,7 @@ function Pnr({ page, t }: { page: Page; t: PageTheme }) {
 function Berth({ page, t }: { page: Page; t: PageTheme }) {
   const d = page.data;
   const fav = d.favBerth in BERTH_LABEL ? d.favBerth : 'LB';
+  useSfxAt([0.2, 'chug']);
   // Bay: three tiers on the left, two side berths on the right.
   const berths = useMemo(() => [
     { id: 'UB', x: 34, y: 40, w: 200 }, { id: 'MB', x: 34, y: 120, w: 200 }, { id: 'LB', x: 34, y: 200, w: 200 },

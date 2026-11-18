@@ -8,6 +8,7 @@ import { PageShell } from '../components/PageShell';
 import { spring } from '../lib/motion';
 import { useSettleAfter } from '../lib/settle';
 import { BRAND, themeOf, type PageTheme } from '../lib/themes';
+import { useSfx, useSfxAt } from '../lib/sound';
 
 /**
  * HOTEL_STAY: nights away, in three looks picked per user by `variant.layout`:
@@ -25,6 +26,7 @@ function Keycard({ page, t, mood }: { page: Page; t: PageTheme; mood: Mood }) {
   const d = page.data;
   const [unlocked, setUnlocked] = useState(false);
   useEffect(() => { const id = window.setTimeout(() => setUnlocked(true), 1500); return () => clearTimeout(id); }, []);
+  useSfxAt([[0.35, 'swoosh'], [1.45, 'beep'], [1.7, 'door']]);
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       {/* the room behind the door */}
@@ -95,6 +97,8 @@ function Skyline({ page, t }: { page: Page; t: PageTheme }) {
     return () => ids.forEach(clearTimeout);
   }, [target]);
   const litSet = new Set(order.slice(0, lit));
+  const sfx = useSfx();
+  useEffect(() => { if (lit) sfx('blip', lit / target); }, [lit, target, sfx]);
   const towerH = 44 + rows * 34, towerTop = 300 - towerH;
   const stars = useMemo(() => Array.from({ length: 18 }, () => ({ x: Math.random() * 400, y: Math.random() * 120, d: Math.random() * 2 })), []);
   return (
@@ -140,6 +144,7 @@ function Luggage({ page, t, mood }: { page: Page; t: PageTheme; mood: Mood }) {
   const tags = d.cities.slice(0, 4);
   const xs = tags.length === 1 ? [200] : tags.map((_, i) => 60 + (i * 280) / (tags.length - 1));
   const tilt = [-10, 6, -5, 9];
+  useSfxAt(tags.map((_, i) => [0.55 + i * 0.3, 'swoosh'] as [number, 'swoosh']));
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       {/* rail the tags hang from */}
