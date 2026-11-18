@@ -79,15 +79,15 @@ export function Persona({ page }: { page: PageOf<'PERSONA'> }) {
   );
 }
 
-export function Summary({ page, share, firstName, onReplay }: { page: PageOf<'SUMMARY'>; share: ShareCard; firstName: string; onReplay: () => void }) {
+export function Summary({ page, share, firstName, onReplay }: { page: PageOf<'SUMMARY'>; share: ShareCard; firstName: string | null; onReplay: () => void }) {
   useSettleAfter(2500);
   const d = page.data, t = THEMES[page.type];
   const [copied, setCopied] = useState(false);
-  const shareText = `My Safarnama 2026: ${share.personaTitle}. ${d.stats.map((s) => `${s.label}: ${s.value}`).join(' · ')}`;
+  const shareText = `My Wrap 2026: ${share.personaTitle}. ${d.stats.map((s) => `${s.label}: ${s.value}`).join(' · ')}`;
   const doShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      if (navigator.share) { await navigator.share({ title: 'Safarnama 2026', text: shareText }); return; }
+      if (navigator.share) { await navigator.share({ title: 'Wrap 2026', text: shareText }); return; }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return; // the viewer closed the share sheet
     }
@@ -97,7 +97,7 @@ export function Summary({ page, share, firstName, onReplay }: { page: PageOf<'SU
     <div className="page" style={{ ['--bg' as string]: t.bg, ['--fg' as string]: t.fg, justifyContent: 'center' }}>
       <motion.div className="card" initial={{ y: 600, rotate: 12 }} animate={{ y: 0, rotate: -1.5 }} transition={{ type: 'spring', stiffness: 140, damping: 14, delay: 0.2 }}
         style={{ position: 'relative', padding: '20px 20px 16px', borderRadius: 26, borderColor: '#fff', boxShadow: `0 8px 0 ${t.edge}` }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: '#D63941', letterSpacing: '0.1em' }}>{page.copy.kicker.toUpperCase()} · {firstName.toUpperCase()}</div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: '#D63941', letterSpacing: '0.1em' }}>{page.copy.kicker.toUpperCase()}{firstName ? ` · ${firstName.toUpperCase()}` : ''}</div>
         <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.05, margin: '6px 0 0', paddingRight: 70 }}>{share.personaTitle}</div>
         <motion.div initial={{ scale: 3, opacity: 0, rotate: 30 }} animate={{ scale: 1, opacity: 1, rotate: -12 }} transition={{ type: 'spring', stiffness: 500, damping: 16, delay: 1.2 }}
           style={{ position: 'absolute', right: 14, top: 14, width: 74, height: 74, borderRadius: '50%', border: '4px solid #D63941', color: '#D63941', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 12, textAlign: 'center', lineHeight: 1.1 }}>

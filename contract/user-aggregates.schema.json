@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/safarnama/user-aggregates.schema.json",
+  "$id": "https://example.com/wrap/user-aggregates.schema.json",
   "title": "UserYearAggregates",
   "description": "Input contract for the wrap service: one document per user per year, produced by the data pipeline and looked up by userId when the app calls POST /api/v1/wrap. Counts cover completed journeys only (cancelled bookings excluded) with departure dates inside the year. Every block is optional: when a block is missing or below its threshold, the page that needs it is simply not shown. cities, legs, monthly, longestGapDays and states are needed as soon as the user has 3 or more trips.",
   "type": "object",

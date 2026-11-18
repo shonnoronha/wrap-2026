@@ -1,4 +1,4 @@
-import type { PageType } from '../contract';
+import type { Palette, PageType, WrapPage } from '../contract';
 
 /** Colours taken from redbus.in: brand red, ink, pink tints, lavender greys, link blue, success green. */
 export const BRAND = {
@@ -56,4 +56,29 @@ export const THEMES: Record<PageType, PageTheme> = {
   DREAM: { bg: '#E4EEFF', fg: B.ink, accent: B.red, edge: '#C6D8F6' },
   PERSONA: { bg: B.ink, fg: '#fff', accent: B.red, edge: '#000' },
   SUMMARY: red,
+  TRAIN: ink,
+  HOTEL_STAY: { bg: '#1B1A33', fg: '#fff', accent: B.gold, edge: '#11102A' },
+  STREAK: red,
+  RHYTHM: mist,
+  OPERATOR: blush,
+  GROWTH: { bg: B.green, fg: '#fff', accent: '#B8E986', edge: '#005C1E' },
+  EXTREMES: ink,
+  PLACES: blush,
+  SIGNATURE: ink,
+  FIRST_AND_LAST: mist,
 };
+
+/** Palettes a page's `variant.palette` can pick (1.1). */
+export const PALETTES: Record<Palette, PageTheme> = {
+  red,
+  ink,
+  mist,
+  blush,
+  night: { bg: '#1B1A33', fg: '#fff', accent: B.gold, edge: '#11102A' },
+  sun: { bg: '#FFEBD9', fg: B.ink, accent: '#F08A24', edge: '#F6CFA8' },
+  green: { bg: B.green, fg: '#fff', accent: '#B8E986', edge: '#005C1E' },
+};
+
+/** The theme a page renders with: its variant's palette if it has one, else the type's theme. */
+export const themeOf = (page: Pick<WrapPage, 'type' | 'variant'>): PageTheme =>
+  (page.variant?.palette && PALETTES[page.variant.palette]) || THEMES[page.type];

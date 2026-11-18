@@ -2,8 +2,8 @@ page_order,page_type,page_name,page_shown_when,data_point,app_api_field,pipeline
 ,ALL,Every page,Every wrap,First name,user.firstName,firstName,string,,Aarav,u_aarav,Intro headline; summary ticket,Profile first name
 ,ALL,Every page,Every wrap,Member since,user.memberSince,memberSince,integer,year,2017,u_aarav,Not shown yet (available for copy),Year the account was created
 ,ALL,Every page,Every wrap,Wrap year,year,year,integer,year,2026,u_aarav,Titles,Wrap year
-1,INTRO,Safarnama 2026,Always,Year,pages[type=INTRO].data.year,year,integer,year,2026,u_aarav,Big number counts up to it,Wrap year
-1,INTRO,Safarnama 2026,Always,Total trips,pages[type=INTRO].data.totalTrips,busTrips + trainTrips,integer,trips,29,u_aarav,Body text,Completed bus + train journeys in the year
+1,INTRO,Wrap 2026,Always,Year,pages[type=INTRO].data.year,year,integer,year,2026,u_aarav,Big number counts up to it,Wrap year
+1,INTRO,Wrap 2026,Always,Total trips,pages[type=INTRO].data.totalTrips,busTrips + trainTrips,integer,trips,29,u_aarav,Body text,Completed bus + train journeys in the year
 2,FIRST_STEPS,Your first stop,User has 1-2 trips,Trips,pages[type=FIRST_STEPS].data.trips,busTrips + trainTrips,integer,trips,2,u_kabir,Context for the short wrap,Completed journeys in the year
 2,FIRST_STEPS,Your first stop,User has 1-2 trips,First trip from,pages[type=FIRST_STEPS].data.from,firstTrip.from,string,city,Bengaluru,u_kabir,Start of the winding road,Origin of the first journey of the year
 2,FIRST_STEPS,Your first stop,User has 1-2 trips,First trip to,pages[type=FIRST_STEPS].data.to,firstTrip.to,string,city,Mysuru,u_kabir,Flag at the end of the road,Destination of the first journey
@@ -92,8 +92,8 @@ page_order,page_type,page_name,page_shown_when,data_point,app_api_field,pipeline
 23,PERSONA,Your travel type,Always,Persona ID,pages[type=PERSONA].data.personaId,derived,string,,MIDNIGHT_WINDOW_LOYALIST,u_aarav,Selects the badge,Rules: 1-2 trips -> FRESH_TICKET; more train than bus -> RAIL_ROYALTY; 6+ new cities -> WEEKEND_WANDERER; 60%+ night and 60%+ window -> MIDNIGHT_WINDOW_LOYALIST; else ROAD_REGULAR
 23,PERSONA,Your travel type,Always,Persona title,pages[type=PERSONA].data.title,derived,string,,The Midnight Window Loyalist,u_aarav,Headline on the badge,Title for the persona ID
 23,PERSONA,Your travel type,Always,Traits,pages[type=PERSONA].data.traits[],derived,string[3],,Night owl; Window seat; Last-minute,u_aarav,Chips that pop in,Three trait labels for the persona ID
-24,SUMMARY,Safarnama 2026,Always,Ticket stats,pages[type=SUMMARY].data.stats[].label / value,derived,list of label + value,,"Distance: 14,820 km; Trips: 29; Cities: 9; Top route: BLR ⇄ HYD; Saved: ₹4,360; Nights on board: 19",u_aarav,Ticket card grid (up to 6),"Distance, Trips, Cities, Top route (city codes, if 2+ trips), Saved (if any), Nights on board (if any)"
-24,SUMMARY,Safarnama 2026,Always,Next destination,pages[type=SUMMARY].data.prediction.destination,prediction.destination,string,city,Hyderabad,u_aarav,Crystal-ball line,Forecast of the next trip from the user's pattern; omit when none
-24,SUMMARY,Safarnama 2026,Always,Next trip date,pages[type=SUMMARY].data.prediction.by,prediction.by,string,date,9 Jan,u_aarav,Crystal-ball line,Forecast date of that trip
+24,SUMMARY,Wrap 2026,Always,Ticket stats,pages[type=SUMMARY].data.stats[].label / value,derived,list of label + value,,"Distance: 14,820 km; Trips: 29; Cities: 9; Top route: BLR ⇄ HYD; Saved: ₹4,360; Nights on board: 19",u_aarav,Ticket card grid (up to 6),"Distance, Trips, Cities, Top route (city codes, if 2+ trips), Saved (if any), Nights on board (if any)"
+24,SUMMARY,Wrap 2026,Always,Next destination,pages[type=SUMMARY].data.prediction.destination,prediction.destination,string,city,Hyderabad,u_aarav,Crystal-ball line,Forecast of the next trip from the user's pattern; omit when none
+24,SUMMARY,Wrap 2026,Always,Next trip date,pages[type=SUMMARY].data.prediction.by,prediction.by,string,date,9 Jan,u_aarav,Crystal-ball line,Forecast date of that trip
 ,SHARE,Share card,Every wrap,Share title,share.personaTitle,derived,string,,The Midnight Window Loyalist,u_aarav,Shared text,Same as the persona title
 ,SHARE,Share card,Every wrap,Share stats,share.stats[].label / value,derived,list of label + value,,"Distance: 14,820 km; Trips: 29; Cities: 9; Top route: BLR ⇄ HYD; Saved: ₹4,360; Nights on board: 19",u_aarav,Shared text,Same list as the summary ticket

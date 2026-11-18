@@ -162,7 +162,7 @@ export function Planner({ page }: { page: PageOf<'PLANNER'> }) {
           <Bubble text={page.copy.bubble} delay={2.4} style={{ left: 24, top: 10 }} />
         </div>
       }
-      footer={<div className="chips"><Chip icon="calendar">Earliest: {d.earliestDays} days ahead</Chip></div>}
+      footer={d.earliestDays != null && <div className="chips"><Chip icon="calendar">Earliest: {d.earliestDays} days ahead</Chip></div>}
     />
   );
 }

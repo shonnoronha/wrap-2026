@@ -79,75 +79,6 @@ export function PeakMonth({ page }: { page: PageOf<'PEAK_MONTH'> }) {
   );
 }
 
-export function TopRoute({ page }: { page: PageOf<'TOP_ROUTE'> }) {
-  const d = page.data, t = THEMES[page.type];
-  const path = useRef<SVGPathElement>(null);
-  const bus = useRef<SVGGElement>(null);
-  const [n, setN] = useState(0);
-  const settle = useSettle();
-  useEffect(() => {
-    let raf = 0, alive = true;
-    const p = path.current!, L = p.getTotalLength();
-    const put = (q: number, back: boolean) => {
-      const pt = p.getPointAtLength(L * q), a = p.getPointAtLength(Math.max(0, L * q - 1)), b = p.getPointAtLength(Math.min(L, L * q + 1));
-      let ang = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI; if (back) ang += 180;
-      const flip = Math.abs(ang) > 90 && Math.abs(ang) < 270; let r = flip ? ang + 180 : ang; if (r > 180) r -= 360; r = Math.max(-28, Math.min(28, r));
-      bus.current?.setAttribute('transform', `translate(${pt.x} ${pt.y}) rotate(${r}) scale(${flip ? -0.8 : 0.8} 0.8)`);
-    };
-    put(0, false);
-    (async () => {
-      await new Promise((r) => setTimeout(r, 900));
-      for (let i = 0; i < d.count && alive; i++) {
-        const ms = Math.max(240, 760 - i * 60), back = i % 2 === 1, t0 = performance.now();
-        await new Promise<void>((res) => {
-          const step = (now: number) => {
-            if (!alive) return;
-            const q = Math.min(1, (now - t0) / ms), e = q < 0.5 ? 2 * q * q : 1 - 2 * (1 - q) * (1 - q);
-            put(back ? 1 - e : e, back);
-            if (q < 1) raf = requestAnimationFrame(step); else res();
-          };
-          raf = requestAnimationFrame(step);
-        });
-        setN(i + 1);
-      }
-      if (alive) window.setTimeout(settle, 900);
-    })();
-    return () => { alive = false; cancelAnimationFrame(raf); };
-  }, [d.count, settle]);
-  const pin = (x: number, label: string, delay: number) => (
-    <motion.g initial={{ y: -200 }} animate={{ y: 0 }} transition={{ ...spring.bouncy, delay }}>
-      <path d={`M${x} 250c-18-24-24-34-24-44a24 24 0 0 1 48 0c0 10-6 20-24 44z`} fill={t.edge} transform="translate(0 4)" />
-      <path d={`M${x} 250c-18-24-24-34-24-44a24 24 0 0 1 48 0c0 10-6 20-24 44z`} fill={t.accent} />
-      <circle cx={x} cy={206} r={9} fill="#fff" />
-      <text x={x} y={286} textAnchor="middle" fontSize={17} fontWeight={800} fill={t.fg}>{label}</text>
-    </motion.g>
-  );
-  return (
-    <PageShell
-      type={page.type}
-      copy={page.copy}
-      hero={
-        <motion.p className="big" key={n} initial={{ scale: 1.25 }} animate={{ scale: 1 }} transition={spring.pop}>
-          {n}×
-        </motion.p>
-      }
-      art={
-        <svg viewBox="0 0 400 320" preserveAspectRatio="xMidYMid meet">
-          <path d="M70 230Q200 40 330 230" fill="none" stroke={t.edge} strokeWidth={10 + n * 1.4} strokeLinecap="round" opacity={0.55} />
-          <path ref={path} d="M70 230Q200 40 330 230" fill="none" stroke="#fff" strokeWidth={4} strokeDasharray="2 12" strokeLinecap="round" />
-          {pin(70, d.from, 0.2)}
-          {pin(330, d.to, 0.35)}
-          <g ref={bus}><SideBus /></g>
-          {n === d.count && <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring.pop}>
-            <rect x={150} y={20} width={100} height={36} rx={18} fill="#fff" />
-            <text x={200} y={44} textAnchor="middle" fontSize={15} fontWeight={800} fill={t.fg}>Top {d.topPercentOnRoute}%</text>
-          </motion.g>}
-        </svg>
-      }
-    />
-  );
-}
-
 export function NightOwl({ page }: { page: PageOf<'NIGHT_OWL'> }) {
   const d = page.data, t = THEMES[page.type];
   useSettleAfter(3000);
@@ -176,7 +107,7 @@ export function NightOwl({ page }: { page: PageOf<'NIGHT_OWL'> }) {
           </div>
           <Bubble text={page.copy.bubble} delay={1.6} style={{ left: 24, top: 20 }} tail="80%" />
           <Pop delay={2.2} style={{ position: 'absolute', right: 20, bottom: 30 }}>
-            <Chip icon="sun">{d.sunrises} sunrises</Chip>
+            {d.sunrises != null ? <Chip icon="sun">{d.sunrises} sunrises</Chip> : <Chip icon="clock">Usually {d.usualDeparture}</Chip>}
           </Pop>
         </div>
       }

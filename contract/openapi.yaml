@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
-  title: Safarnama Wrap API
-  version: 1.0.0
+  title: Wrap API
+  version: 1.1.0
   description: |
     Returns a user's year-in-travel wrap as an ordered list of pages.
 
     Design rules:
-    - The request carries only `userId`. Everything else (year, locale, which
+    - The request carries only `userId` (the integer rb_user_id). Everything else (year, locale, which
       pages, copy) is decided on the server.
     - The server decides which pages a user sees. A user with 2 trips gets a
       short wrap; a heavy traveller gets up to 12 content pages, ranked by how
@@ -16,6 +16,21 @@ info:
       they don't recognise, so new page types can ship server-side first.
     - Numbers in `data` drive animations (Rive state-machine inputs on
       Android, React components on web). Text in `copy` is shown as-is.
+
+    Schema 1.1 (unique wraps per user):
+    - Wraps are composed once per user by a batch job from the 68-column
+      pipeline row (`PipelineRow`) and stored; this endpoint serves the stored
+      wrap. Card mix, order, copy and look are picked per user, seeded by
+      `rb_user_id`, so similar travellers still get different wraps.
+    - Each page may carry `variant` (`layout`, `palette`, `mascotMood`).
+      `layout: default` is the type's own animated page; any other layout is
+      drawn by the shared insight renderer from `InsightData`.
+    - New page types STREAK, RHYTHM, OPERATOR, GROWTH, EXTREMES, PLACES,
+      SIGNATURE and FIRST_AND_LAST all use `InsightData`.
+    - Classic types ODOMETER, TOP_ROUTE, NIGHT_OWL, LAST_MINUTE, PLANNER,
+      SAVINGS and ECO may get a non-default layout; their `data` then also
+      carries `insight` (InsightData) for it.
+    - All 1.1 additions are optional or new types, so 1.0 clients keep working.
 servers:
   - url: /
     description: Same origin as the docs page (API on :8787, or through the Vite proxy on :5173)
@@ -30,7 +45,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WrapRequest'
-            example: { userId: u_aarav }
+            example: { userId: 42 }
       responses:
         '200':
           description: The user's wrap
@@ -38,12 +53,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/WrapResponse' }
         '400':
-          description: Body missing or userId not a string
+          description: Body missing, has extra fields, or userId is not a positive integer
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ApiError' }
         '404':
-          description: Unknown userId
+          description: Unknown userId (the dummy server has users 1 to 400; anything above is 404)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ApiError' }
@@ -59,14 +74,14 @@ components:
       additionalProperties: false
       required: [userId]
       properties:
-        userId: { type: string, minLength: 1, maxLength: 64 }
+        userId: { type: integer, format: int64, minimum: 1, example: 42, description: 'rb_user_id. The dummy server has users 1 to 400.' }
     WrapResponse:
       type: object
       required: [schemaVersion, wrapId, userId, year, generatedAt, locale, currency, user, pages, share]
       properties:
-        schemaVersion: { type: string, enum: ['1.0'] }
-        wrapId: { type: string }
-        userId: { type: string }
+        schemaVersion: { type: string, enum: ['1.0', '1.1'], description: '1.1 adds `variant` on pages and the insight page types' }
+        wrapId: { type: string, example: wrap_2026_42 }
+        userId: { type: integer, format: int64, description: rb_user_id from the request }
         year: { type: integer }
         generatedAt: { type: string, format: date-time }
         locale: { type: string, example: en-IN }
@@ -75,7 +90,7 @@ components:
           type: object
           required: [firstName, memberSince]
           properties:
-            firstName: { type: string }
+            firstName: { type: string, nullable: true, description: 'Null when the data source has no name (the data API does not carry one).' }
             memberSince: { type: integer }
         pages:
           type: array
@@ -91,7 +106,7 @@ components:
           description: Page kind. The shape of `data` depends on it (see PageData*). Unknown values must be skipped by clients.
           enum: [INTRO, FIRST_STEPS, ODOMETER, PEAK_MONTH, TOP_ROUTE, NIGHT_OWL, EARLY_BIRD, SEAT, RAIL, WAITLIST,
                  LAST_MINUTE, PLANNER, FLEXI, LIVE_TRACKING, HOMEWARD, HOTEL, EXPLORER, SQUAD, SAVINGS, PRIMO, ECO, DREAM,
-                 PERSONA, SUMMARY]
+                 PERSONA, SUMMARY, STREAK, RHYTHM, OPERATOR, GROWTH, EXTREMES, PLACES, SIGNATURE, FIRST_AND_LAST, TRAIN, HOTEL_STAY]
         dwellMs:
           type: integer
           description: |
@@ -100,9 +115,41 @@ components:
         copy: { $ref: '#/components/schemas/Copy' }
         data:
           type: object
-          description: One of the PageData* schemas, chosen by `type`.
+          description: One of the PageData* schemas, chosen by `type`. Insight types (STREAK … FIRST_AND_LAST) all use InsightData.
+        variant: { $ref: '#/components/schemas/Variant' }
       discriminator:
         propertyName: type
+    Variant:
+      type: object
+      description: |
+        (1.1) How this page should look for this user, picked by the composer.
+        Clients render `layout` if they ship it and otherwise fall back to the
+        type's default look. Optional; 1.0 clients ignore it. When a classic type
+        (ODOMETER, TOP_ROUTE, …) gets a non-default layout, its `data` also carries
+        `insight` (InsightData) for that layout.
+      required: [layout]
+      properties:
+        layout: { type: string, enum: [default, big_number, ticket, stack, heatmap, ring, tiles, versus, route, passport, coaches, pnr, berth, keycard, skyline, luggage], description: 'TRAIN uses coaches | pnr | berth; HOTEL_STAY uses keycard | skyline | luggage; insight types and classic types use the rest.' }
+        palette: { type: string, enum: [red, ink, mist, blush, night, sun, green] }
+        mascotMood: { type: string, enum: [happy, wow, cheeky, love, cool, sleepy, sad] }
+    InsightData:
+      type: object
+      required: [facts]
+      properties:
+        hero:
+          type: object
+          required: [value]
+          properties: { value: { type: number }, prefix: { type: string }, suffix: { type: string }, label: { type: string }, decimals: { type: integer } }
+        facts: { type: array, items: { $ref: '#/components/schemas/Stat' } }
+        heatmap: { type: array, items: { type: integer }, minItems: 7, maxItems: 7, description: Trips per weekday, Monday first }
+        weeks: { type: array, items: { type: integer }, minItems: 53, maxItems: 53, description: 'Trips per week of the year, week 1 first (from weekly_heatmap). The heatmap layout draws weeks when present.' }
+        quote: { type: string, description: Sentence shown as the main visual (SIGNATURE) }
+        compare: { type: array, items: { $ref: '#/components/schemas/Stat' }, minItems: 2, maxItems: 2, description: Two values side by side (versus layout) }
+        route:
+          type: object
+          description: Endpoints for the route layout
+          properties: { from: { type: string }, to: { type: string } }
+        stamps: { type: array, items: { type: string }, description: Short strings drawn as passport stamps }
     Copy:
       type: object
       required: [kicker, headline]
@@ -136,6 +183,159 @@ components:
             code: { type: string, enum: [BAD_REQUEST, USER_NOT_FOUND, NOT_ENOUGH_DATA, INTERNAL] }
             message: { type: string }
 
+    # ---- Pipeline input: GENERATED by scripts/gen-row-contract.mjs, do not edit by hand ----
+    PipelineRow:
+      type: object
+      description: |
+        One row of serving.india_bus_wrap_2026 (analytics.india_bus_wrap_2026), as returned by the data
+        serving API: GET {WRAP_DATA_API_URL}/wrap/{rb_user_id} with a bearer token. The wrap
+        server fetches it server-side, adapts it (server/wrap/facts.mjs) and composes the
+        WrapResponse the apps render. Not returned by POST /api/v1/wrap.
+        India B2C Bus Wrap 2026. One row per logged-in user (rb_user_id) with more than 20 confirmed India bus trips in calendar year 2026 (IST). Confirmed booking = transaction.bus_ticket_events event_type=101, country_code=IND, operator_id not in (15926,19715). Future journeys included; cancelled bookings still counted as trips. Built by Athena aggregation then written to Iceberg and Postgres for GET /wrap/{rb_user_id}.
+        Extra columns the table adds later are allowed and ignored until the adapter uses them.
+      required: [rb_user_id, trips, seats_booked, trips_2025, trips_change_pct, busiest_month, longest_gap_days, streak_days, streak_weeks, streak_months, trips_percentile, first_trip_date, first_trip_route, last_trip_date, last_trip_route, total_km, earth_laps, longest_trip_route, longest_trip_km, shortest_trip_route, shortest_trip_km, avg_trip_km, km_estimated_trips, unique_cities, new_cities_vs_2025, top_destination, home_base, farthest_destination, rarest_destination, top_route, top_route_trips, top_3_routes, top_route_rank, top_route_src_lat, top_route_src_lon, top_route_dst_lat, top_route_dst_lon, fav_boarding_point_id, fav_dropping_point_id, night_trips_pct, top_departure_hour, fav_travel_day, weekend_pct, earliest_departure, nights_on_bus, avg_lead_days, closest_booking_minutes, usual_booking_hour, cancellations, app_pct, top_seat, sleeper_pct, ac_pct, fav_operator, fav_bus_type, total_saved_inr, savings_equivalent_tickets, best_deal_inr, best_deal_route, cheapest_ticket_inr, solo_pct, trips_since_2025, km_since_2025, ratings_given, co2_saved_kg, tree_equivalent, archetype, signature_trip, weekly_heatmap]
+      properties:
+        rb_user_id: { type: integer, format: int64, description: "BIGINT. Primary key. Logged-in redBus user id (rb_user_id > 0). One row per user." }
+        trips: { type: integer, format: int64, description: "BIGINT. Count of confirmed India bus bookings (event_type=101) with journey date in 2026 IST. Cancelled tickets still count. Eligible users have trips > 20." }
+        seats_booked: { type: integer, format: int64, description: "BIGINT. Sum of seats on those 2026 trips (COALESCE(seat_count,1))." }
+        trips_2025: { type: integer, format: int64, description: "BIGINT. Same trip definition for journey dates in 2025 IST." }
+        trips_change_pct: { type: number, nullable: true, description: "DOUBLE. Percent change vs 2025: 100*(trips-trips_2025)/trips_2025; NULL if no 2025 trips." }
+        busiest_month: { type: integer, format: int64, description: "BIGINT. Calendar month (1-12, IST) with the most 2026 trips." }
+        longest_gap_days: { type: integer, format: int64, nullable: true, description: "BIGINT. Longest gap in days between consecutive distinct 2026 travel days." }
+        streak_days: { type: integer, format: int64, description: "BIGINT. Longest run of consecutive calendar days with at least one trip." }
+        streak_weeks: { type: integer, format: int64, description: "BIGINT. Longest run of consecutive weeks with at least one trip." }
+        streak_months: { type: integer, format: int64, description: "BIGINT. Longest run of consecutive months with at least one trip." }
+        trips_percentile: { type: number, nullable: true, description: "DOUBLE. Percentile (0-100) of trip count within the eligible (>20 trips) cohort." }
+        first_trip_date: { type: string, format: date-time, description: "DATE. Date of earliest 2026 journey (IST). Served as an ISO date-time at midnight UTC, e.g. 2026-02-25T00:00:00Z." }
+        first_trip_route: { type: string, description: "STRING. Route of first 2026 trip: '{source} to {destination}'." }
+        last_trip_date: { type: string, format: date-time, description: "DATE. Date of latest 2026 journey (IST), including future journeys. Served as an ISO date-time at midnight UTC, e.g. 2026-02-25T00:00:00Z." }
+        last_trip_route: { type: string, description: "STRING. Route of last 2026 trip." }
+        total_km: { type: number, description: "DOUBLE. Total km travelled. Joins lis.distance_registry on city ids; missing routes use India average distance." }
+        earth_laps: { type: number, description: "DOUBLE. total_km / 40075 (Earth equatorial circumference)." }
+        longest_trip_route: { type: string, description: "STRING. Route of the longest single trip by km." }
+        longest_trip_km: { type: number, description: "DOUBLE. Km of the longest single trip." }
+        shortest_trip_route: { type: string, description: "STRING. Route of the shortest single trip by km." }
+        shortest_trip_km: { type: number, description: "DOUBLE. Km of the shortest single trip." }
+        avg_trip_km: { type: number, description: "DOUBLE. Average km per 2026 trip." }
+        km_estimated_trips: { type: integer, format: int64, description: "BIGINT. Number of trips that used average-distance fallback (no registry match)." }
+        unique_cities: { type: integer, format: int64, description: "BIGINT. Distinct origin/destination city ids visited in 2026." }
+        new_cities_vs_2025: { type: integer, format: int64, description: "BIGINT. City ids visited in 2026 but not in 2025." }
+        top_destination: { type: string, description: "STRING. Most visited destination city name." }
+        home_base: { type: string, description: "STRING. Most frequent origin city name (inferred home)." }
+        farthest_destination: { type: string, description: "STRING. Destination of the longest trip (farthest by km)." }
+        rarest_destination: { type: string, nullable: true, description: "STRING. User destination with the fewest distinct travellers in 2026 India population." }
+        top_route: { type: string, description: "STRING. Most travelled '{source} to {destination}' route." }
+        top_route_trips: { type: integer, format: int64, description: "BIGINT. Trip count on top_route." }
+        top_3_routes: { type: string, description: "STRING. Top 3 routes with counts, semicolon-separated." }
+        top_route_rank: { type: integer, format: int64, nullable: true, description: "BIGINT. Rank among all 2026 travellers on top_route by trip count (1=most)." }
+        top_route_src_lat: { type: number, nullable: true, description: "DOUBLE. Latitude of top_route origin (map trail)." }
+        top_route_src_lon: { type: number, nullable: true, description: "DOUBLE. Longitude of top_route origin." }
+        top_route_dst_lat: { type: number, nullable: true, description: "DOUBLE. Latitude of top_route destination." }
+        top_route_dst_lon: { type: number, nullable: true, description: "DOUBLE. Longitude of top_route destination." }
+        fav_boarding_point_id: { type: integer, format: int64, nullable: true, description: "BIGINT. Most used boarding_point_id." }
+        fav_dropping_point_id: { type: integer, format: int64, nullable: true, description: "BIGINT. Most used dropping_point_id." }
+        night_trips_pct: { type: number, description: "DOUBLE. Share of trips boarding 21:00–04:59 IST (%)." }
+        top_departure_hour: { type: integer, format: int64, description: "BIGINT. Most common boarding hour 0–23 IST." }
+        fav_travel_day: { type: string, description: "STRING. Most common weekday of boarding (e.g. Saturday)." }
+        weekend_pct: { type: number, description: "DOUBLE. Share of trips boarding Sat/Sun (%)." }
+        earliest_departure: { type: string, description: "STRING. Earliest boarding clock time HH:mm IST." }
+        nights_on_bus: { type: integer, format: int64, description: "BIGINT. Trips whose boarding + route duration crosses midnight IST." }
+        avg_lead_days: { type: number, nullable: true, description: "DOUBLE. Average days from booking (date_of_issue) to journey/boarding." }
+        closest_booking_minutes: { type: integer, format: int64, nullable: true, description: "BIGINT. Shortest non-negative booking-to-boarding gap (minutes)." }
+        usual_booking_hour: { type: integer, format: int64, description: "BIGINT. Most common booking hour 0–23 IST." }
+        cancellations: { type: integer, format: int64, description: "BIGINT. Count of 2026 tickets also present in bus_cancellation_events (event_type=201)." }
+        app_pct: { type: number, description: "DOUBLE. Share of trips where sales_channel contains 'app' (%)." }
+        top_seat: { type: string, nullable: true, description: "STRING. Most booked seat label (first seat on multi-seat tickets)." }
+        sleeper_pct: { type: number, description: "DOUBLE. Share of sleeper trips (%)." }
+        ac_pct: { type: number, description: "DOUBLE. Share of AC trips (%)." }
+        fav_operator: { type: string, nullable: true, description: "STRING. Most used operator name (service_provider_name)." }
+        fav_bus_type: { type: string, description: "STRING. Most used '{AC|Non-AC} {Sleeper|Seater}' label." }
+        total_saved_inr: { type: number, description: "DOUBLE. Sum of discount amounts across 2026 trips (INR)." }
+        savings_equivalent_tickets: { type: number, nullable: true, description: "DOUBLE. total_saved_inr / average per-seat fare." }
+        best_deal_inr: { type: number, nullable: true, description: "DOUBLE. Largest single discount (INR)." }
+        best_deal_route: { type: string, nullable: true, description: "STRING. Route where best_deal_inr occurred." }
+        cheapest_ticket_inr: { type: number, nullable: true, description: "DOUBLE. Lowest positive per-seat fare (ticket_fare/seats)." }
+        solo_pct: { type: number, description: "DOUBLE. Share of trips with exactly 1 seat (%)." }
+        trips_since_2025: { type: integer, format: int64, description: "BIGINT. trips + trips_2025." }
+        km_since_2025: { type: number, description: "DOUBLE. total_km + 2025 km." }
+        ratings_given: { type: integer, format: int64, description: "BIGINT. 2026 trips with a matching ugc.ratings row on tin." }
+        co2_saved_kg: { type: number, description: "DOUBLE. total_km * 0.10 (kg CO2 vs driving)." }
+        tree_equivalent: { type: number, description: "DOUBLE. co2_saved_kg / 21." }
+        archetype: { type: string, description: "STRING. Persona: Night Owl | Last-Minute Dasher | Planner | Sleeper Loyalist | Weekend Wanderer | Steady Traveller." }
+        signature_trip: { type: string, description: "STRING. Most common 'route | hour | seat type | operator'." }
+        weekly_heatmap: { type: string, description: "STRING. JSON string of week_number → trip_count for 2026." }
+      example:
+        rb_user_id: 42
+        trips: 17
+        seats_booked: 18
+        trips_2025: 27
+        trips_change_pct: -37
+        busiest_month: 8
+        longest_gap_days: 28
+        streak_days: 2
+        streak_weeks: 8
+        streak_months: 9
+        trips_percentile: 70.6
+        first_trip_date: "2026-01-25T00:00:00Z"
+        first_trip_route: "Mumbai to Varanasi"
+        last_trip_date: "2026-09-12T00:00:00Z"
+        last_trip_route: "Mumbai to Chennai"
+        total_km: 23536
+        earth_laps: 0.59
+        longest_trip_route: "Mumbai to Varanasi"
+        longest_trip_km: 1561
+        shortest_trip_route: "Mumbai to Hyderabad"
+        shortest_trip_km: 777
+        avg_trip_km: 1384
+        km_estimated_trips: 5
+        unique_cities: 8
+        new_cities_vs_2025: 3
+        top_destination: "Varanasi"
+        home_base: "Mumbai"
+        farthest_destination: "Varanasi"
+        rarest_destination: "Goa"
+        top_route: "Mumbai to Varanasi"
+        top_route_trips: 9
+        top_3_routes: "Mumbai to Varanasi (9); Mumbai to Chennai (4); Mumbai to Hyderabad (2)"
+        top_route_rank: 343
+        top_route_src_lat: 19.07
+        top_route_src_lon: 72.88
+        top_route_dst_lat: 25.32
+        top_route_dst_lon: 82.97
+        fav_boarding_point_id: 22084
+        fav_dropping_point_id: 35180
+        night_trips_pct: 81.8
+        top_departure_hour: 21
+        fav_travel_day: "Tuesday"
+        weekend_pct: 56.3
+        earliest_departure: "04:40"
+        nights_on_bus: 14
+        avg_lead_days: 9.7
+        closest_booking_minutes: 238
+        usual_booking_hour: 22
+        cancellations: 3
+        app_pct: 68.3
+        top_seat: "S27"
+        sleeper_pct: 88.5
+        ac_pct: 93.4
+        fav_operator: "Orange Tours"
+        fav_bus_type: "Non-AC Sleeper"
+        total_saved_inr: 2612
+        savings_equivalent_tickets: 3.2
+        best_deal_inr: 454
+        best_deal_route: "Mumbai to Chennai"
+        cheapest_ticket_inr: 496
+        solo_pct: 90.5
+        trips_since_2025: 44
+        km_since_2025: 39879
+        ratings_given: 15
+        co2_saved_kg: 1883
+        tree_equivalent: 86
+        archetype: "Night Owl"
+        signature_trip: "Mumbai to Varanasi | 21h | Sleeper | Orange Tours"
+        weekly_heatmap: "{\"2\":1,\"9\":2,\"13\":1,\"15\":1,\"19\":1,\"21\":1,\"23\":1,\"30\":1,\"34\":1,\"36\":2,\"38\":1,\"39\":1,\"40\":1,\"48\":1,\"50\":1}"
+    # ---- end of generated PipelineRow ----
+
     # ---- Page payloads (value of WrapPage.data, keyed by WrapPage.type) ----
     PageDataINTRO:
       type: object
@@ -162,6 +362,7 @@ components:
         equivalent:
           type: object
           properties: { label: { type: string }, times: { type: number } }
+        insight: { $ref: '#/components/schemas/InsightData' }
     PageDataPEAK_MONTH:
       type: object
       properties:
@@ -171,10 +372,10 @@ components:
         longestGapDays: { type: integer }
     PageDataTOP_ROUTE:
       type: object
-      properties: { from: { type: string }, to: { type: string }, count: { type: integer }, topPercentOnRoute: { type: number } }
+      properties: { from: { type: string }, to: { type: string }, count: { type: integer }, topPercentOnRoute: { type: number }, rankOnRoute: { type: integer, description: '1.1: user rank among travellers on this route (top_route_rank); set instead of topPercentOnRoute' }, insight: { $ref: '#/components/schemas/InsightData' } }
     PageDataNIGHT_OWL:
       type: object
-      properties: { nights: { type: integer }, nightSharePct: { type: integer }, sunrises: { type: integer }, usualDeparture: { type: string } }
+      properties: { nights: { type: integer }, nightSharePct: { type: integer }, sunrises: { type: integer, description: Optional in 1.1 }, usualDeparture: { type: string }, insight: { $ref: '#/components/schemas/InsightData' } }
     PageDataEARLY_BIRD:
       type: object
       properties: { morningSharePct: { type: integer }, earliestDeparture: { type: string }, trips: { type: integer } }
@@ -189,10 +390,10 @@ components:
       properties: { confirmed: { type: integer }, path: { type: array, items: { type: string } }, pnrChecks: { type: integer } }
     PageDataLAST_MINUTE:
       type: object
-      properties: { minLeadMinutes: { type: integer }, avgLeadHours: { type: number } }
+      properties: { minLeadMinutes: { type: integer }, avgLeadHours: { type: number }, insight: { $ref: '#/components/schemas/InsightData' } }
     PageDataPLANNER:
       type: object
-      properties: { avgLeadDays: { type: integer }, earliestDays: { type: integer } }
+      properties: { avgLeadDays: { type: integer }, earliestDays: { type: integer, description: Optional in 1.1 }, insight: { $ref: '#/components/schemas/InsightData' } }
     PageDataFLEXI:
       type: object
       properties:
@@ -232,13 +433,13 @@ components:
       properties: { groupBookings: { type: integer }, largestGroup: { type: integer }, seatsBooked: { type: integer } }
     PageDataSAVINGS:
       type: object
-      properties: { saved: { type: integer }, chais: { type: integer }, bestDeal: { type: integer }, coupons: { type: integer } }
+      properties: { saved: { type: integer }, chais: { type: integer }, bestDeal: { type: integer }, coupons: { type: integer, description: Optional in 1.1 }, insight: { $ref: '#/components/schemas/InsightData' } }
     PageDataPRIMO:
       type: object
       properties: { rides: { type: integer }, avgRatingGiven: { type: number } }
     PageDataECO:
       type: object
-      properties: { co2Kg: { type: integer }, trees: { type: integer } }
+      properties: { co2Kg: { type: integer }, trees: { type: integer }, insight: { $ref: '#/components/schemas/InsightData' } }
     PageDataDREAM:
       type: object
       properties: { destination: { type: string }, searches: { type: integer } }
@@ -252,3 +453,53 @@ components:
         prediction:
           type: object
           properties: { destination: { type: string }, by: { type: string } }
+    PageDataSTREAK:
+      description: Longest run of weeks or months with a trip (streak_weeks, streak_months, longest_gap_days).
+      allOf: [{ $ref: '#/components/schemas/InsightData' }]
+    PageDataRHYTHM:
+      description: Weekly pattern. Weekend share as hero, weekly_heatmap as heatmap, favourite day and busiest month as facts.
+      allOf: [{ $ref: '#/components/schemas/InsightData' }]
+    PageDataOPERATOR:
+      description: Favourite operator, bus type and seat. Sleeper share as hero.
+      allOf: [{ $ref: '#/components/schemas/InsightData' }]
+    PageDataGROWTH:
+      description: Trips versus 2025 and trips percentile. compare is last year vs this year.
+      allOf: [{ $ref: '#/components/schemas/InsightData' }]
+    PageDataEXTREMES:
+      description: Longest and shortest trip. compare is shortest vs longest; route is the longest route.
+      allOf: [{ $ref: '#/components/schemas/InsightData' }]
+    PageDataPLACES:
+      description: Unique, new, rarest and farthest cities. stamps lists city names.
+      allOf: [{ $ref: '#/components/schemas/InsightData' }]
+    PageDataSIGNATURE:
+      description: signature_trip from the pipeline as quote, with top route and usual departure as facts.
+      allOf: [{ $ref: '#/components/schemas/InsightData' }]
+    PageDataFIRST_AND_LAST:
+      description: First and latest trip of the year. compare is first vs latest destination.
+      allOf: [{ $ref: '#/components/schemas/InsightData' }]
+    PageDataTRAIN:
+      type: object
+      description: PROPOSED (dummy data only until a rail feed exists). Year on trains; drawn as coaches, a PNR slip (needs wlPath) or a sleeper berth.
+      required: [trips, km, from, to, topClass, favBerth, nightTrains, longestHours, waitlistConfirmed]
+      properties:
+        trips: { type: integer }
+        km: { type: integer }
+        from: { type: string }
+        to: { type: string }
+        topClass: { type: string, example: 3A }
+        favBerth: { type: string, enum: [LB, MB, UB, SL, SU] }
+        nightTrains: { type: integer }
+        longestHours: { type: number }
+        waitlistConfirmed: { type: integer }
+        wlPath: { type: array, items: { type: string }, example: [WL 18, WL 7, RAC 4, CNF] }
+    PageDataHOTEL_STAY:
+      type: object
+      description: PROPOSED (dummy data only until a hotel feed exists). Nights away; drawn as a key card and door, a lit-up hotel tower, or luggage tags (needs 2+ cities).
+      required: [stays, nights, cities, topCity, longestStayNights, comboTrips]
+      properties:
+        stays: { type: integer }
+        nights: { type: integer }
+        cities: { type: array, maxItems: 4, items: { type: object, required: [name, nights], properties: { name: { type: string }, nights: { type: integer } } } }
+        topCity: { type: string }
+        longestStayNights: { type: integer }
+        comboTrips: { type: integer, description: Trips where a bus and a hotel were booked together }

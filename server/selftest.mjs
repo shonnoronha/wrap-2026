@@ -12,6 +12,7 @@ const noHoles = (v, path) => {
   if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) noHoles(x, `${path}.${k}`);
 };
 
+const orders = new Set();
 for (const [id, u] of Object.entries(USERS)) {
   let w;
   try { w = buildWrap(id, u); } catch (e) {
@@ -25,12 +26,15 @@ for (const [id, u] of Object.entries(USERS)) {
   assert.ok(types.length - 3 <= MAX_CONTENT_PAGES);
   types.forEach((t) => assert.ok(KNOWN.has(t), t));
   noHoles(w, id);
+  assert.ok(!orders.has(types.join()), `${id}: same page order as another user`);
+  orders.add(types.join());
+  assert.deepEqual(buildWrap(id, u).pages.map((p) => p.type), types, `${id}: order is not stable`);
   console.log(`${id.padEnd(9)} -> ${types.length} pages: ${types.join(', ')}`);
 }
 
 assert.throws(() => buildWrap('nope', undefined), (e) => e.status === 404);
-for (const bad of [null, [], {}, { userId: 5 }, { userId: 'u_aarav', year: 2025 }, { userId: '../etc' }]) {
+for (const bad of [null, [], {}, { userId: '5' }, { userId: 0 }, { userId: -3 }, { userId: 1.5 }, { userId: 11, year: 2025 }, { userId: '../etc' }]) {
   assert.throws(() => validateRequest(bad), (e) => e.status === 400, JSON.stringify(bad));
 }
-assert.equal(validateRequest({ userId: 'u_aarav' }), 'u_aarav');
+assert.equal(validateRequest({ userId: 11 }), 11);
 console.log('All API checks passed');

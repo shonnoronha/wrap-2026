@@ -1,15 +1,26 @@
-// Wrap API. One endpoint: POST /api/v1/wrap with {"userId": "..."}.
+// Wrap API server. One endpoint: POST /api/v1/wrap with {"userId": <rb_user_id>}.
+// It answers in the response format of contract/openapi.yaml (WrapResponse):
+//
+//   rb_user_id 1–400 (WRAP_DUMMY_MAX_ID)   dummy users, see wrap/dummyApi.mjs
+//   anything else                          real data: fetched server-side from the data
+//                                          serving API (wrap/dataApi.mjs), adapted and
+//                                          composed into a wrap. Needs WRAP_DATA_API_URL and
+//                                          WRAP_DATA_API_TOKEN (put them in .env, never in the app)
+//
+// Set WRAP_DUMMY_MAX_ID=0 to send every ID to the real API.
 // In production mode it also serves the built web app from dist/.
 
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { USERS } from './data/users.mjs';
-import { buildWrap, WrapError } from './wrap/buildWrap.mjs';
+import { WrapError } from './wrap/buildWrap.mjs';
+import { dummyWrap } from './wrap/dummyApi.mjs';
+import { dataApiConfigured, dataApiLabel, realWrap } from './wrap/dataApi.mjs';
 import { validateRequest } from './wrap/validate.mjs';
 
 const PORT = Number(process.env.API_PORT || 8787);
+const WRAPS = fileURLToPath(new URL('./data/wraps/', import.meta.url));
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
 const SPEC = fileURLToPath(new URL('../contract/openapi.yaml', import.meta.url));
 const SWAGGER = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14';
@@ -40,6 +51,21 @@ async function readJson(req) {
 }
 
 
+// Wraps composed by the batch job (scripts/compose-batch.mjs). These users get
+// their stored wrap; other IDs are handled by dummyWrap().
+const STORED = {};
+for (const file of await readdir(WRAPS).catch(() => [])) {
+  if (file.endsWith('.json')) STORED[file.slice(0, -5)] = JSON.parse(await readFile(join(WRAPS, file), 'utf8')).wrap;
+}
+
+const DUMMY_MAX_ID = Number(process.env.WRAP_DUMMY_MAX_ID ?? 400);
+
+/** Dummy users first, then the real data API (when configured). */
+async function getWrap(userId) {
+  if (userId <= DUMMY_MAX_ID || !dataApiConfigured()) return dummyWrap(userId, { stored: STORED });
+  return realWrap(userId);
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   try {
@@ -47,7 +73,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/v1/wrap') {
       if (req.method !== 'POST') return fail(res, 405, 'BAD_REQUEST', 'Use POST');
       const userId = validateRequest(await readJson(req));
-      const wrap = buildWrap(userId, USERS[userId]);
+      const wrap = await getWrap(userId);
       await new Promise((r) => setTimeout(r, LATENCY_MS));
       return send(res, 200, wrap);
     }
@@ -76,5 +102,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  server.listen(PORT, '127.0.0.1', () => console.log(`Wrap API on http://127.0.0.1:${PORT}`));
+  const HOST = process.env.HOST || '127.0.0.1'; // the Docker image sets 0.0.0.0
+  server.listen(PORT, HOST, () => console.log(`Wrap API on http://${HOST}:${PORT}\n  dummy users: 1-${DUMMY_MAX_ID}\n  real users:  ${dataApiConfigured() ? dataApiLabel() : 'off (set WRAP_DATA_API_URL and WRAP_DATA_API_TOKEN in .env)'}`));
 }

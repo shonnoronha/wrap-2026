@@ -6,3 +6,7 @@ dist/
 *.log
 .env
 .env.*
+
+# Composed by scripts/compose-batch.mjs
+server/data/wraps/
+!.env.example

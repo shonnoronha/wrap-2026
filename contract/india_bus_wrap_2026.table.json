@@ -1,0 +1,358 @@
+{
+  "table": "analytics.india_bus_wrap_2026",
+  "also_served_as": "serving.india_bus_wrap_2026",
+  "pipeline": "india-bus-wrap-2026",
+  "description": "India B2C Bus Wrap 2026. One row per logged-in user (rb_user_id) with more than 20 confirmed India bus trips in calendar year 2026 (IST). Confirmed booking = transaction.bus_ticket_events event_type=101, country_code=IND, operator_id not in (15926,19715). Future journeys included; cancelled bookings still counted as trips. Built by Athena aggregation then written to Iceberg and Postgres for GET /wrap/{rb_user_id}.",
+  "grain": "one row per rb_user_id",
+  "primary_key": [
+    "rb_user_id"
+  ],
+  "served_by": "GET {WRAP_DATA_API_URL}/wrap/{rb_user_id} with Authorization: Bearer <token> (datapilot serving)",
+  "schema": [
+    {
+      "name": "rb_user_id",
+      "type": "BIGINT",
+      "description": "Primary key. Logged-in redBus user id (rb_user_id > 0). One row per user."
+    },
+    {
+      "name": "trips",
+      "type": "BIGINT",
+      "description": "Count of confirmed India bus bookings (event_type=101) with journey date in 2026 IST. Cancelled tickets still count. Eligible users have trips > 20."
+    },
+    {
+      "name": "seats_booked",
+      "type": "BIGINT",
+      "description": "Sum of seats on those 2026 trips (COALESCE(seat_count,1))."
+    },
+    {
+      "name": "trips_2025",
+      "type": "BIGINT",
+      "description": "Same trip definition for journey dates in 2025 IST."
+    },
+    {
+      "name": "trips_change_pct",
+      "type": "DOUBLE",
+      "description": "Percent change vs 2025: 100*(trips-trips_2025)/trips_2025; NULL if no 2025 trips."
+    },
+    {
+      "name": "busiest_month",
+      "type": "BIGINT",
+      "description": "Calendar month (1-12, IST) with the most 2026 trips."
+    },
+    {
+      "name": "longest_gap_days",
+      "type": "BIGINT",
+      "description": "Longest gap in days between consecutive distinct 2026 travel days."
+    },
+    {
+      "name": "streak_days",
+      "type": "BIGINT",
+      "description": "Longest run of consecutive calendar days with at least one trip."
+    },
+    {
+      "name": "streak_weeks",
+      "type": "BIGINT",
+      "description": "Longest run of consecutive weeks with at least one trip."
+    },
+    {
+      "name": "streak_months",
+      "type": "BIGINT",
+      "description": "Longest run of consecutive months with at least one trip."
+    },
+    {
+      "name": "trips_percentile",
+      "type": "DOUBLE",
+      "description": "Percentile (0-100) of trip count within the eligible (>20 trips) cohort."
+    },
+    {
+      "name": "first_trip_date",
+      "type": "DATE",
+      "description": "Date of earliest 2026 journey (IST)."
+    },
+    {
+      "name": "first_trip_route",
+      "type": "STRING",
+      "description": "Route of first 2026 trip: '{source} to {destination}'."
+    },
+    {
+      "name": "last_trip_date",
+      "type": "DATE",
+      "description": "Date of latest 2026 journey (IST), including future journeys."
+    },
+    {
+      "name": "last_trip_route",
+      "type": "STRING",
+      "description": "Route of last 2026 trip."
+    },
+    {
+      "name": "total_km",
+      "type": "DOUBLE",
+      "description": "Total km travelled. Joins lis.distance_registry on city ids; missing routes use India average distance."
+    },
+    {
+      "name": "earth_laps",
+      "type": "DOUBLE",
+      "description": "total_km / 40075 (Earth equatorial circumference)."
+    },
+    {
+      "name": "longest_trip_route",
+      "type": "STRING",
+      "description": "Route of the longest single trip by km."
+    },
+    {
+      "name": "longest_trip_km",
+      "type": "DOUBLE",
+      "description": "Km of the longest single trip."
+    },
+    {
+      "name": "shortest_trip_route",
+      "type": "STRING",
+      "description": "Route of the shortest single trip by km."
+    },
+    {
+      "name": "shortest_trip_km",
+      "type": "DOUBLE",
+      "description": "Km of the shortest single trip."
+    },
+    {
+      "name": "avg_trip_km",
+      "type": "DOUBLE",
+      "description": "Average km per 2026 trip."
+    },
+    {
+      "name": "km_estimated_trips",
+      "type": "BIGINT",
+      "description": "Number of trips that used average-distance fallback (no registry match)."
+    },
+    {
+      "name": "unique_cities",
+      "type": "BIGINT",
+      "description": "Distinct origin/destination city ids visited in 2026."
+    },
+    {
+      "name": "new_cities_vs_2025",
+      "type": "BIGINT",
+      "description": "City ids visited in 2026 but not in 2025."
+    },
+    {
+      "name": "top_destination",
+      "type": "STRING",
+      "description": "Most visited destination city name."
+    },
+    {
+      "name": "home_base",
+      "type": "STRING",
+      "description": "Most frequent origin city name (inferred home)."
+    },
+    {
+      "name": "farthest_destination",
+      "type": "STRING",
+      "description": "Destination of the longest trip (farthest by km)."
+    },
+    {
+      "name": "rarest_destination",
+      "type": "STRING",
+      "description": "User destination with the fewest distinct travellers in 2026 India population."
+    },
+    {
+      "name": "top_route",
+      "type": "STRING",
+      "description": "Most travelled '{source} to {destination}' route."
+    },
+    {
+      "name": "top_route_trips",
+      "type": "BIGINT",
+      "description": "Trip count on top_route."
+    },
+    {
+      "name": "top_3_routes",
+      "type": "STRING",
+      "description": "Top 3 routes with counts, semicolon-separated."
+    },
+    {
+      "name": "top_route_rank",
+      "type": "BIGINT",
+      "description": "Rank among all 2026 travellers on top_route by trip count (1=most)."
+    },
+    {
+      "name": "top_route_src_lat",
+      "type": "DOUBLE",
+      "description": "Latitude of top_route origin (map trail)."
+    },
+    {
+      "name": "top_route_src_lon",
+      "type": "DOUBLE",
+      "description": "Longitude of top_route origin."
+    },
+    {
+      "name": "top_route_dst_lat",
+      "type": "DOUBLE",
+      "description": "Latitude of top_route destination."
+    },
+    {
+      "name": "top_route_dst_lon",
+      "type": "DOUBLE",
+      "description": "Longitude of top_route destination."
+    },
+    {
+      "name": "fav_boarding_point_id",
+      "type": "BIGINT",
+      "description": "Most used boarding_point_id."
+    },
+    {
+      "name": "fav_dropping_point_id",
+      "type": "BIGINT",
+      "description": "Most used dropping_point_id."
+    },
+    {
+      "name": "night_trips_pct",
+      "type": "DOUBLE",
+      "description": "Share of trips boarding 21:00–04:59 IST (%)."
+    },
+    {
+      "name": "top_departure_hour",
+      "type": "BIGINT",
+      "description": "Most common boarding hour 0–23 IST."
+    },
+    {
+      "name": "fav_travel_day",
+      "type": "STRING",
+      "description": "Most common weekday of boarding (e.g. Saturday)."
+    },
+    {
+      "name": "weekend_pct",
+      "type": "DOUBLE",
+      "description": "Share of trips boarding Sat/Sun (%)."
+    },
+    {
+      "name": "earliest_departure",
+      "type": "STRING",
+      "description": "Earliest boarding clock time HH:mm IST."
+    },
+    {
+      "name": "nights_on_bus",
+      "type": "BIGINT",
+      "description": "Trips whose boarding + route duration crosses midnight IST."
+    },
+    {
+      "name": "avg_lead_days",
+      "type": "DOUBLE",
+      "description": "Average days from booking (date_of_issue) to journey/boarding."
+    },
+    {
+      "name": "closest_booking_minutes",
+      "type": "BIGINT",
+      "description": "Shortest non-negative booking-to-boarding gap (minutes)."
+    },
+    {
+      "name": "usual_booking_hour",
+      "type": "BIGINT",
+      "description": "Most common booking hour 0–23 IST."
+    },
+    {
+      "name": "cancellations",
+      "type": "BIGINT",
+      "description": "Count of 2026 tickets also present in bus_cancellation_events (event_type=201)."
+    },
+    {
+      "name": "app_pct",
+      "type": "DOUBLE",
+      "description": "Share of trips where sales_channel contains 'app' (%)."
+    },
+    {
+      "name": "top_seat",
+      "type": "STRING",
+      "description": "Most booked seat label (first seat on multi-seat tickets)."
+    },
+    {
+      "name": "sleeper_pct",
+      "type": "DOUBLE",
+      "description": "Share of sleeper trips (%)."
+    },
+    {
+      "name": "ac_pct",
+      "type": "DOUBLE",
+      "description": "Share of AC trips (%)."
+    },
+    {
+      "name": "fav_operator",
+      "type": "STRING",
+      "description": "Most used operator name (service_provider_name)."
+    },
+    {
+      "name": "fav_bus_type",
+      "type": "STRING",
+      "description": "Most used '{AC|Non-AC} {Sleeper|Seater}' label."
+    },
+    {
+      "name": "total_saved_inr",
+      "type": "DOUBLE",
+      "description": "Sum of discount amounts across 2026 trips (INR)."
+    },
+    {
+      "name": "savings_equivalent_tickets",
+      "type": "DOUBLE",
+      "description": "total_saved_inr / average per-seat fare."
+    },
+    {
+      "name": "best_deal_inr",
+      "type": "DOUBLE",
+      "description": "Largest single discount (INR)."
+    },
+    {
+      "name": "best_deal_route",
+      "type": "STRING",
+      "description": "Route where best_deal_inr occurred."
+    },
+    {
+      "name": "cheapest_ticket_inr",
+      "type": "DOUBLE",
+      "description": "Lowest positive per-seat fare (ticket_fare/seats)."
+    },
+    {
+      "name": "solo_pct",
+      "type": "DOUBLE",
+      "description": "Share of trips with exactly 1 seat (%)."
+    },
+    {
+      "name": "trips_since_2025",
+      "type": "BIGINT",
+      "description": "trips + trips_2025."
+    },
+    {
+      "name": "km_since_2025",
+      "type": "DOUBLE",
+      "description": "total_km + 2025 km."
+    },
+    {
+      "name": "ratings_given",
+      "type": "BIGINT",
+      "description": "2026 trips with a matching ugc.ratings row on tin."
+    },
+    {
+      "name": "co2_saved_kg",
+      "type": "DOUBLE",
+      "description": "total_km * 0.10 (kg CO2 vs driving)."
+    },
+    {
+      "name": "tree_equivalent",
+      "type": "DOUBLE",
+      "description": "co2_saved_kg / 21."
+    },
+    {
+      "name": "archetype",
+      "type": "STRING",
+      "description": "Persona: Night Owl | Last-Minute Dasher | Planner | Sleeper Loyalist | Weekend Wanderer | Steady Traveller."
+    },
+    {
+      "name": "signature_trip",
+      "type": "STRING",
+      "description": "Most common 'route | hour | seat type | operator'."
+    },
+    {
+      "name": "weekly_heatmap",
+      "type": "STRING",
+      "description": "JSON string of week_number → trip_count for 2026."
+    }
+  ]
+}
