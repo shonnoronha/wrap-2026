@@ -7,8 +7,10 @@ import { PageShell } from '../components/PageShell';
 import { spring } from '../lib/motion';
 import { useSettleAfter } from '../lib/settle';
 import { THEMES } from '../lib/themes';
+import { useSfxAt } from '../lib/sound';
 
 export function Intro({ page }: { page: PageOf<'INTRO'> }) {
+  useSfxAt([0.5, 'horn']);
   const d = page.data;
   useSettleAfter(2600);
   return (

@@ -7,11 +7,15 @@ import { PageShell } from '../components/PageShell';
 import { spring } from '../lib/motion';
 import { useSettleAfter } from '../lib/settle';
 import { BRAND, themeOf, type PageTheme } from '../lib/themes';
+import { useSfxAt, type SfxName } from '../lib/sound';
+import { fits } from '../../server/wrap/layouts.mjs';
+import { GENERIC_ART } from './insightGeneric';
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 /** Layouts that can't draw this data fall back to one that can. */
 function resolveLayout(layout: string | undefined, d: InsightData): InsightLayout {
+  if (layout && layout in GENERIC_ART && fits(layout, d)) return layout as InsightLayout;
   if (layout === 'heatmap' && (d.heatmap?.length === 7 || (d.weeks?.length ?? 0) >= 52)) return 'heatmap';
   if (layout === 'ring' && d.hero?.suffix === '%') return 'ring';
   if (layout === 'ticket' || layout === 'stack') return layout;
@@ -43,6 +47,7 @@ function MascotCorner({ mood, light, bubble, at = 'bottom' }: { mood: Mood; ligh
 }
 
 function BigNumberArt({ d, t }: { d: InsightData; t: PageTheme }) {
+  useSfxAt([0.5, 'pop', 0.6]);
   return (
     <svg viewBox="0 0 400 320" preserveAspectRatio="xMidYMid meet">
       {[0, 1, 2].map((i) => (
@@ -62,6 +67,7 @@ function BigNumberArt({ d, t }: { d: InsightData; t: PageTheme }) {
 
 function RingArt({ d, t }: { d: InsightData; t: PageTheme }) {
   const pct = Math.max(0, Math.min(100, d.hero!.value)) / 100, r = 100, c = 2 * Math.PI * r;
+  useSfxAt([[0.4, 'needle'], [2, 'ding']]);
   return (
     <svg viewBox="0 0 400 320" preserveAspectRatio="xMidYMid meet">
       <circle cx={200} cy={160} r={r} fill="none" stroke={t.edge} strokeWidth={26} />
@@ -79,6 +85,7 @@ const MONTH_TICKS = [['J', 1], ['F', 5], ['M', 9], ['A', 14], ['M', 18], ['J', 2
 /** 53 week columns, height by trips that week; the busiest week is highlighted. */
 function WeeksArt({ d, t }: { d: InsightData; t: PageTheme }) {
   const vals = d.weeks!, max = Math.max(...vals, 1), peak = vals.indexOf(max);
+  useSfxAt([[0.3, 'roll', 0.2], [0.6, 'roll', 0.5], [0.9, 'roll', 0.8], [1.6, 'pop', 1]]);
   const w = 5.2, gap = 1.6, x0 = (400 - (vals.length * (w + gap) - gap)) / 2, base = 250;
   return (
     <svg viewBox="0 0 400 320" preserveAspectRatio="xMidYMid meet">
@@ -103,6 +110,7 @@ function WeeksArt({ d, t }: { d: InsightData; t: PageTheme }) {
 function HeatmapArt({ d, t }: { d: InsightData; t: PageTheme }) {
   if (d.weeks && d.weeks.length >= 52) return <WeeksArt d={d} t={t} />;
   const vals = d.heatmap!, max = Math.max(...vals, 1), peak = vals.indexOf(max);
+  useSfxAt(vals.map((_, i) => [0.3 + i * 0.08, 'pop', i / 7] as [number, SfxName, number]));
   const bw = 38, gap = 10, x0 = (400 - (7 * bw + 6 * gap)) / 2, base = 280;
   return (
     <svg viewBox="0 0 400 320" preserveAspectRatio="xMidYMid meet">
@@ -122,6 +130,7 @@ function HeatmapArt({ d, t }: { d: InsightData; t: PageTheme }) {
 }
 
 function TicketArt({ d, t }: { d: InsightData; t: PageTheme }) {
+  useSfxAt([[0.2, 'swoosh'], [0.55, 'thud']]);
   return (
     <motion.div initial={{ y: -260, rotate: -6 }} animate={{ y: 0, rotate: -2 }} transition={{ ...spring.bouncy, delay: 0.2 }}
       style={{ position: 'absolute', left: 28, right: 28, top: 30, background: '#fff', color: BRAND.ink, borderRadius: 22, boxShadow: `0 8px 0 ${t.edge}`, overflow: 'hidden' }}>
@@ -166,6 +175,7 @@ const cardBg = (t: PageTheme) => (t.fg === '#fff' ? 'rgba(255,255,255,0.14)' : '
 
 function TilesArt({ d, t }: { d: InsightData; t: PageTheme }) {
   const tiles = d.facts.slice(0, 4);
+  useSfxAt(tiles.map((_, i) => [0.27 + i * 0.18, 'pop', i / 4] as [number, SfxName, number]));
   return (
     <div style={{ position: 'absolute', left: 24, right: 24, top: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       {tiles.map((f, i) => {
@@ -185,6 +195,7 @@ function TilesArt({ d, t }: { d: InsightData; t: PageTheme }) {
 
 function VersusArt({ d, t }: { d: InsightData; t: PageTheme }) {
   const [a, b] = d.compare!;
+  useSfxAt([[0.2, 'swoosh'], [0.45, 'swoosh'], [0.85, 'thud']]);
   const side = (s: Stat, from: number, hot: boolean) => (
     <motion.div initial={{ x: from, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ ...spring.bouncy, delay: from < 0 ? 0.2 : 0.45 }}
       style={{ flex: 1, background: hot ? t.accent : cardBg(t), color: hot ? t.bg : undefined, borderRadius: 22, padding: '18px 14px', textAlign: 'center', boxShadow: `0 6px 0 ${t.edge}` }}>
@@ -205,6 +216,7 @@ function VersusArt({ d, t }: { d: InsightData; t: PageTheme }) {
 
 function RouteArt({ d, t }: { d: InsightData; t: PageTheme }) {
   const path = 'M70 230Q200 50 330 230';
+  useSfxAt([[0.2, 'pop', 0.3], [0.35, 'pop', 0.6], [0.6, 'horn']]);
   const pin = (x: number, label: string, delay: number) => (
     <motion.g initial={{ y: -160, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ ...spring.bouncy, delay }}>
       <path d={`M${x} 250c-16-22-22-31-22-40a22 22 0 0 1 44 0c0 9-6 18-22 40z`} fill={t.accent} />
@@ -234,6 +246,7 @@ const STAMP_SPOTS = [
 
 function PassportArt({ d, t }: { d: InsightData; t: PageTheme }) {
   const ink = t.fg === '#fff' ? t.accent : BRAND.red;
+  useSfxAt(d.stamps!.slice(0, 6).map((_, i) => [0.38 + i * 0.28, 'thud'] as [number, SfxName]));
   return (
     <div style={{ position: 'absolute', inset: '10px 18px 0' }}>
       {d.stamps!.slice(0, 6).map((s, i) => {
@@ -262,7 +275,8 @@ export function Insight({ page }: { page: PageOf<InsightType> }) {
   const light = t.bg === BRAND.red || t.bg === BRAND.green;
   useSettleAfter(3200);
 
-  const art = {
+  const generic = GENERIC_ART[layout];
+  const art = generic ? <generic.Art d={d} t={t} /> : {
     big_number: <BigNumberArt d={d} t={t} />,
     ring: <RingArt d={d} t={t} />,
     heatmap: <HeatmapArt d={d} t={t} />,
@@ -272,9 +286,9 @@ export function Insight({ page }: { page: PageOf<InsightType> }) {
     versus: <VersusArt d={d} t={t} />,
     route: <RouteArt d={d} t={t} />,
     passport: <PassportArt d={d} t={t} />,
-  }[layout];
+  }[layout as Exclude<InsightLayout, keyof typeof GENERIC_ART>];
   // Ring, ticket, tiles and versus already show the numbers in the art; the others put the hero above the headline.
-  const showHero = d.hero && (layout === 'big_number' || layout === 'heatmap' || layout === 'route' || layout === 'passport' || (layout === 'stack' && !d.quote));
+  const showHero = d.hero && (generic?.hero || layout === 'big_number' || layout === 'heatmap' || layout === 'route' || layout === 'passport' || (layout === 'stack' && !d.quote));
   const showFacts = layout === 'big_number' || layout === 'ring' || layout === 'heatmap';
   const corner = layout === 'big_number' || layout === 'ring' || layout === 'heatmap';
 

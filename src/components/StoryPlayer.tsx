@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useMotionValue, useTransform, type MotionValue
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WrapResponse } from '../contract';
 import { SettleContext } from '../lib/settle';
+import { play, setMuted, startMusic, stopMusic, useMuted } from '../lib/sound';
 import { themeOf } from '../lib/themes';
 import { isKnown, RenderPage } from '../pages/registry';
 
@@ -58,6 +59,12 @@ export function StoryPlayer({ wrap, onClose, startAt = 0, hold = false }: {
     const id = window.setTimeout(() => setSettledKey(key), MAX_ANIMATION_MS);
     return () => clearTimeout(id);
   }, [key]);
+
+  // Sound: the loop plays while the story is open; each page change swooshes in.
+  const muted = useMuted();
+  useEffect(() => { startMusic(); return () => stopMusic(); }, []);
+  const first = useRef(true);
+  useEffect(() => { if (first.current) { first.current = false; return; } play('whoosh'); }, [key]);
 
   // Reading timer: only runs once the current page has settled.
   const dwell = page.dwellMs > 0 ? page.dwellMs : 5000;
@@ -122,9 +129,17 @@ export function StoryPlayer({ wrap, onClose, startAt = 0, hold = false }: {
       </AnimatePresence>
 
       <div className="topbar" style={{ ['--fg' as string]: t.fg }}>
-        <div className="progress">
+        <div className="progress" style={pages.length > 30 ? { gap: 1 } : undefined}>
           {pages.map((p, i) => <Segment key={`${run}-${p.id}`} i={i} index={index} progress={progress} settled={settled} />)}
         </div>
+        <button className="close" aria-label={muted ? 'Turn sound on' : 'Mute'} title={muted ? 'Sound off' : 'Sound on'} onClick={() => setMuted(!muted)}>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style={{ display: 'block', margin: 'auto' }}>
+            <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+            {muted
+              ? <path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              : <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />}
+          </svg>
+        </button>
         <button className="close" aria-label="Close wrap" onClick={onClose}>✕</button>
       </div>
       {page.type !== 'SUMMARY' && (

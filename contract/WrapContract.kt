@@ -81,13 +81,13 @@ import kotlinx.serialization.json.decodeFromJsonElement
 @Serializable data class Hero(val value: Double, val prefix: String? = null, val suffix: String? = null, val label: String? = null, val decimals: Int? = null)
 @Serializable data class RouteEnds(val from: String, val to: String)
 /** STREAK, RHYTHM, OPERATOR, GROWTH, EXTREMES, PLACES, SIGNATURE, FIRST_AND_LAST (1.1). */
-/** TRAIN (proposed data). variant.layout: coaches | pnr | berth. */
+/** TRAIN (proposed data). variant.layout: coaches | pnr | berth, or a generic insight layout (then data.insight is set). */
 @Serializable data class TrainData(val trips: Int, val km: Int, val from: String, val to: String, val topClass: String, val favBerth: String,
     val nightTrains: Int, val longestHours: Double, val waitlistConfirmed: Int, val wlPath: List<String>? = null)
 @Serializable data class StayCity(val name: String, val nights: Int)
-/** HOTEL_STAY (proposed data). variant.layout: keycard | skyline | luggage. */
+/** HOTEL_STAY (proposed data). variant.layout: keycard | skyline | luggage, or a generic insight layout (then data.insight is set). */
 @Serializable data class HotelStayData(val stays: Int, val nights: Int, val cities: List<StayCity>, val topCity: String, val longestStayNights: Int, val comboTrips: Int)
-/** Also sent as `data.insight` on a classic page whose variant.layout isn't "default". */
+/** Also sent as `data.insight` on a classic, TRAIN or HOTEL_STAY page drawn with an insight layout. Layouts: big_number, ticket, stack, heatmap, ring, tiles, versus, route, passport, gauge, rollers, flipboard, scratch, trophy, pictogram, receipt, columns, timeline, chat, polaroid, podium, postcard, calendar. */
 @Serializable data class InsightData(
     val hero: Hero? = null, val facts: List<Stat>, val heatmap: List<Int>? = null, val weeks: List<Int>? = null, val quote: String? = null,
     val compare: List<Stat>? = null, val route: RouteEnds? = null, val stamps: List<String>? = null,

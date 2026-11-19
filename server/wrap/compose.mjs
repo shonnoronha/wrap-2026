@@ -26,6 +26,8 @@ import { CARDS, RELATED, archetypeOf, TRAITS, CORE_STATS, EXTRA_STATS, ALL_PALET
 import { normalise } from './facts.mjs';
 import { WrapError, YEAR } from './buildWrap.mjs';
 import { hashOf, orderDeck, pickOne, rand, seededSort } from './seeded.mjs';
+import { PICKS } from './selection.mjs';
+import { fits, GENERIC, INSIGHT_LAYOUTS } from './layouts.mjs';
 
 export const LIBRARY_VERSION = '2026.2';
 export const CAMPAIGN_SALT = 'wrap-2026-v1';
@@ -36,6 +38,11 @@ const LIMITS = { kicker: 32, headline: 72, body: 140, bubble: 32 };
 const BANNED = /\b(stupid|loser|lazy|boring|waste|cheapskate|failed)\b/i;
 export { hashOf };
 
+// Layouts picked in the variant gallery (selection.mjs). The server swaps them in after a save.
+let picks = PICKS;
+export const getPicks = () => picks;
+export const setPicks = (next) => { picks = next || {}; };
+
 // ───────────────────────── library helpers ─────────────────────────
 
 const framingsOf = (card, f) => Object.entries(card.framings)
@@ -43,14 +50,25 @@ const framingsOf = (card, f) => Object.entries(card.framings)
   .filter((fr) => !fr.when || fr.when(f));
 const analogiesOf = (card, f) => (card.analogies || []).filter((a) => a.when(f));
 const familySim = (a, b) => (a === b ? 1 : RELATED.has(`${a}|${b}`) || RELATED.has(`${b}|${a}`) ? 0.3 : 0);
-const layoutsOf = (card, f, framing) => (card.layoutsFor ? card.layoutsFor(framing) : card.layouts || ['default'])
-  .filter((l) => !card.layoutOk || card.layoutOk(l, f));
+const hasInsight = (card) => !!(card.insight || card.insight$);
+/** The insight payload this card would carry for this user (to check which generic layouts fit). */
+const insightOf = (card, f, framing) => {
+  const v = { framing, layout: null, slots: card.slots(f), analogy: analogiesOf(card, f)[0] };
+  return card.insight ? card.data(f, v) : card.insight$(f, v);
+};
+/** The card's own layouts for this framing, plus every generic layout its data fits (layouts.mjs). */
+const layoutsOf = (card, f, framing) => {
+  const own = (card.layoutsFor ? card.layoutsFor(framing) : card.layouts || ['default']).filter((l) => !card.layoutOk || card.layoutOk(l, f));
+  if (!hasInsight(card)) return own;
+  const d = insightOf(card, f, framing);
+  return [...own, ...GENERIC.filter((l) => !own.includes(l) && fits(l, d))];
+};
 
-function isEligible(card, f) {
+function isEligible(card, f, opts) {
   if (!card.when(f)) return false;
   if (!framingsOf(card, f).length) return false;
   if (card.analogies && !analogiesOf(card, f).length) return false;
-  return combosOf(card, f).length > 0;
+  return combosOf(card, f, opts).length > 0;
 }
 
 /** True when every {slot} in this copy option has a value for this user (nullable data). */
@@ -59,16 +77,21 @@ function slotsFilled(card, f, tpl, analogy, extra) {
   return Object.values(tpl).every((text) => [...String(text).matchAll(/\{(\w+)\}/g)].every(([, k]) => slots[k] != null));
 }
 
-/** Every distinct way this card can read and look for this user. Palette and mood come later. */
-function combosOf(card, f) {
+/**
+ * Every distinct way this card can read and look for this user. Palette and mood come later.
+ * Picked layouts (selection.mjs) narrow the list, unless none of them fits this user.
+ * `all: true` ignores the picks (the gallery shows everything).
+ */
+function combosOf(card, f, { all = false } = {}) {
   const out = [];
   const analogies = card.analogies ? analogiesOf(card, f) : [null];
   const persona = card.type === 'PERSONA' ? archetypeOf(f) : null;
   for (const fr of framingsOf(card, f)) {
+    const layouts = layoutsOf(card, f, fr.key);
     fr.copy.forEach((tpl, option) => {
       for (const analogy of analogies) {
         if (!persona && !slotsFilled(card, f, tpl, analogy)) continue;
-        for (const layout of layoutsOf(card, f, fr.key)) {
+        for (const layout of layouts) {
           if (persona) {
             persona.titles.forEach((title, ti) => persona.lines.forEach((line, li) => out.push({
               framing: fr.key, option, analogy, layout, extra: { title, line }, key: `${fr.key}/${option}/t${ti}/l${li}`,
@@ -79,6 +102,11 @@ function combosOf(card, f) {
         }
       }
     });
+  }
+  const chosen = picks[card.type];
+  if (!all && chosen?.length) {
+    const kept = out.filter((c) => chosen.includes(c.layout));
+    if (kept.length) return kept;
   }
   return out;
 }
@@ -184,7 +212,7 @@ function buildPage({ card, combo, palette, mood }, f) {
   if (card.type === 'SUMMARY') v.stats = f._stats;
   let data = card.data(f, v);
   // Classic cards drawn with an insight layout carry the insight payload next to their own data.
-  if (!card.insight && !card.customLayouts && combo.layout !== 'default') data = { ...data, insight: card.insight$(f, v) };
+  if (!card.insight && combo.layout !== 'default' && (!card.customLayouts || INSIGHT_LAYOUTS.includes(combo.layout))) data = { ...data, insight: card.insight$(f, v) };
   const variant = { layout: combo.layout };
   if (palette) { variant.palette = palette; variant.mascotMood = mood; }
   return {
@@ -199,6 +227,61 @@ function buildPage({ card, combo, palette, mood }, f) {
 
 // ───────────────────────── public API ─────────────────────────
 
+function prepare(row, profile, salt) {
+  const f = normalise(row, profile);
+  f._traits = seededSort(TRAITS.filter(([, ok]) => ok(f)), ([t]) => t, salt, f.seedId, 'traits').slice(0, 3).map(([t]) => t);
+  f._stats = [...CORE_STATS(f), ...seededSort(EXTRA_STATS(f), (s) => s.label, salt, f.seedId, 'stats').slice(0, 3)];
+  return f;
+}
+
+/** Every layout a card can be drawn in, across all its framings. */
+export function layoutsOfCard(card) {
+  const own = card.layoutsFor ? [...new Set(Object.keys(card.framings).flatMap((k) => card.layoutsFor(k) || []))] : card.layouts || ['default'];
+  return hasInsight(card) ? [...own, ...GENERIC.filter((l) => !own.includes(l))] : own;
+}
+
+const COPIES_PER_LAYOUT = 6;
+
+/**
+ * The variant gallery: every card, every layout, drawn for the first sample user
+ * that qualifies, with up to six copy variants each. Picks are ignored here.
+ * samples: [{ userId, row, profile }] in the order to try them.
+ */
+export function variantGallery(samples, { salt = CAMPAIGN_SALT } = {}) {
+  const users = samples.filter((s) => s.row?.trips).map((s) => ({ ...s, f: prepare(s.row, s.profile, salt) }));
+  const shares = new Map();
+  const shareOf = (u) => {
+    if (!shares.has(u.userId)) shares.set(u.userId, composeWrap(u.userId, u.row, u.profile, { salt }).wrap.share);
+    return shares.get(u.userId);
+  };
+  return CARDS.map((card) => {
+    const layouts = layoutsOfCard(card).map((layout) => {
+      for (const u of users) {
+        if (!isEligible(card, u.f, { all: true })) continue;
+        const combos = combosOf(card, u.f, { all: true }).filter((c) => c.layout === layout);
+        if (!combos.length) continue;
+        // One combo per distinct copy, so the copy variants are really different.
+        const seen = new Set(), pick = [];
+        for (const c of combos) {
+          const k = c.extra?.title ?? `${c.framing}/${c.option}/${c.analogy?.key ?? '-'}`;
+          if (seen.has(k)) continue;
+          seen.add(k); pick.push(c);
+          if (pick.length === COPIES_PER_LAYOUT) break;
+        }
+        const palettes = layout === 'default' ? [] : card.palettes || ALL_PALETTES;
+        const mood = layout === 'default' ? undefined : (card.moods || ALL_MOODS)[0];
+        const copies = pick.map((combo) => {
+          const { page, meta } = buildPage({ card, combo, palette: palettes[0], mood }, u.f);
+          return { page, framing: meta.framing, option: meta.option, analogy: meta.analogy };
+        });
+        return { layout, sampleUserId: u.userId, palettes, copies, share: card.type === 'SUMMARY' ? shareOf(u) : undefined };
+      }
+      return { layout, sampleUserId: null, palettes: [], copies: [] };
+    }).filter((l) => l.sampleUserId || !GENERIC.includes(l.layout)); // a generic look no sample fits isn't a real option
+    return { type: card.type, family: card.family, fixed: card.fixed ?? null, layouts };
+  });
+}
+
 /**
  * Compose one user's wrap. Pass `usage` (shared across a batch) to balance
  * variants and orders between users; without it every pick is purely seeded.
@@ -206,9 +289,7 @@ function buildPage({ card, combo, palette, mood }, f) {
 export function composeWrap(userId, row, profile, { salt = CAMPAIGN_SALT, usage, now = new Date().toISOString() } = {}) {
   if (!row) throw new WrapError(404, 'USER_NOT_FOUND', `No user with id ${userId}`);
   if (!row.trips) throw new WrapError(422, 'NOT_ENOUGH_DATA', 'No trips this year, so there is no wrap yet');
-  const f = normalise(row, profile);
-  f._traits = seededSort(TRAITS.filter(([, ok]) => ok(f)), ([t]) => t, salt, f.seedId, 'traits').slice(0, 3).map(([t]) => t);
-  f._stats = [...CORE_STATS(f), ...seededSort(EXTRA_STATS(f), (s) => s.label, salt, f.seedId, 'stats').slice(0, 3)];
+  const f = prepare(row, profile, salt);
 
   const eligible = CARDS.filter((c) => isEligible(c, f));
   const deckLayouts = new Map();

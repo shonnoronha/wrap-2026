@@ -18,6 +18,19 @@
 // copywriters; cards with `perUserLlm` would be written per user.
 
 import { YEAR } from './buildWrap.mjs';
+import { canonicalCity } from '../data/cities.mjs';
+
+/** One stamp per city: "Bangalore", "Bengaluru" and "Katapady (Udupi)"/"Udupi" collapse to one name. */
+export const cityStamps = (names) => {
+  const seen = new Map();
+  for (const raw of names) {
+    if (!raw) continue;
+    const canon = canonicalCity(raw);
+    const key = (canon || String(raw).replace(/\s*\(.*\)\s*$/, '')).trim().toLowerCase();
+    if (!seen.has(key)) seen.set(key, canon || String(raw).trim());
+  }
+  return [...seen.values()];
+};
 
 const n = (x) => Math.round(x).toLocaleString('en-IN');
 const one = (x) => (Math.round(x * 10) / 10).toLocaleString('en-IN');
@@ -90,7 +103,7 @@ export const CARDS = [
     insight$: (f) => ({
       hero: { value: f.totalKm, suffix: ' km', label: 'on the road' },
       facts: [{ label: 'Trips', value: n(f.trips) }, { label: 'Cities', value: n(f.uniqueCities) }, { label: 'Average trip', value: `${n(f.avgTripKm)} km` }, { label: 'Earth laps', value: one(f.earthLaps) }],
-      compare: [{ label: 'This year', value: `${n(f.totalKm)} km` }, { label: 'Since 2025', value: `${n(f.kmSince2025)} km` }],
+      compare: [{ label: 'This year', value: `${n(f.totalKm)} km` }, f.kmLifetime != null ? { label: 'All time', value: `${n(f.kmLifetime)} km` } : { label: 'Since 2025', value: `${n(f.kmSince2025)} km` }],
     }),
     fallback: { kicker: 'The odometer', headline: '{km} km this year.', body: '{trips} trips across {cities} cities.' },
   },
@@ -196,9 +209,10 @@ export const CARDS = [
   },
   {
     type: 'SAVINGS', family: 'Money', dwellMs: 5000,
-    when: (f) => f.saved >= 100 && f.bestDeal.inr != null && !!f.bestDeal.from,
+    when: (f) => f.saved >= 100 && f.bestDeal.inr != null,
     score: (f) => cap(50 + f.saved / 200, 88),
-    slots: (f) => ({ saved: rupees(f.saved), best: rupees(f.bestDeal.inr), deal_route: route(f.bestDeal) }),
+    // No best-deal route (rewind rows): copy that names it is skipped.
+    slots: (f) => ({ saved: rupees(f.saved), best: rupees(f.bestDeal.inr), deal_route: f.bestDeal.from ? route(f.bestDeal) : null }),
     analogies: [
       { key: 'chai', when: (f) => f.saved >= 200, line: 'That’s {chais} cups of cutting chai.', slots: (f) => ({ chais: n(f.saved / 20) }) },
       { key: 'tickets', when: (f) => f.savedTickets >= 1, line: 'That’s about {tickets} tickets on the house.', slots: (f) => ({ tickets: one(f.savedTickets) }) },
@@ -420,7 +434,7 @@ export const CARDS = [
         ...(f.newCities ? [{ label: 'New this year', value: n(f.newCities) }] : []),
         ...(f.rarest ? [{ label: 'Rarest stop', value: f.rarest }] : []), ...(f.farthest ? [{ label: 'Farthest', value: f.farthest }] : []),
       ],
-      stamps: [...new Set([f.homeBase, f.topDestination, f.rarest, f.farthest, ...f.topRoutes.flatMap((r) => [r.from, r.to])].filter(Boolean))],
+      stamps: cityStamps([f.homeBase, f.topDestination, f.rarest, f.farthest, ...f.topRoutes.flatMap((r) => [r.from, r.to])]),
     }),
     fallback: { kicker: 'City collector', headline: '{cities} cities this year.' },
   },
@@ -515,6 +529,18 @@ export const CARDS = [
       favBerth: f.rail.favBerth, nightTrains: f.rail.nightTrains, longestHours: f.rail.longestHours,
       waitlistConfirmed: f.rail.waitlistConfirmed, ...(f.rail.wlPath ? { wlPath: f.rail.wlPath } : {}),
     }),
+    // Generic layouts (layouts.mjs) draw this payload; coaches, berth and pnr draw `data`.
+    insight$: (f) => ({
+      hero: { value: f.rail.km, suffix: ' km', label: 'of track' },
+      facts: [
+        { label: 'Journeys', value: n(f.rail.trips) }, { label: 'Top class', value: f.rail.topClass },
+        ...(f.rail.nightTrains ? [{ label: 'Night trains', value: n(f.rail.nightTrains) }] : []),
+        ...(f.rail.longestHours ? [{ label: 'Longest ride', value: `${one(f.rail.longestHours)} h` }] : []),
+      ],
+      route: { from: f.rail.topRoute.from, to: f.rail.topRoute.to },
+      ...(f.rail.nightTrains ? { compare: [{ label: 'Journeys', value: n(f.rail.trips) }, { label: 'Night trains', value: n(f.rail.nightTrains) }] } : {}),
+      stamps: cityStamps([f.rail.topRoute.from, f.rail.topRoute.to]),
+    }),
     fallback: { kicker: 'All aboard', headline: '{trips} this year.' },
   },
   {
@@ -553,6 +579,15 @@ export const CARDS = [
     data: (f) => ({
       stays: f.hotel.stays, nights: f.hotel.nights, cities: f.hotel.cities.slice(0, 4), topCity: f.hotel.cities[0].name,
       longestStayNights: f.hotel.longestStayNights, comboTrips: f.hotel.comboTrips,
+    }),
+    insight$: (f) => ({
+      hero: { value: f.hotel.nights, suffix: f.hotel.nights === 1 ? ' night' : ' nights', label: 'in hotels' },
+      facts: [
+        { label: 'Stays', value: n(f.hotel.stays) }, { label: 'Cities', value: n(f.hotel.cities.length) },
+        { label: 'Longest stay', value: many(f.hotel.longestStayNights, 'night') }, { label: 'Top city', value: f.hotel.cities[0].name },
+      ],
+      compare: [{ label: 'Stays', value: n(f.hotel.stays) }, { label: 'Nights', value: n(f.hotel.nights) }],
+      stamps: f.hotel.cities.slice(0, 6).map((c) => c.name),
     }),
     fallback: { kicker: 'Checked in', headline: '{nights} of hotel stays.' },
   },

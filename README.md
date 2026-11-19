@@ -78,6 +78,15 @@ slides up, and "Open my Wrap" plays it.
 
 Rohan and Priya have almost the same bus data, and still get different openings, orders, copy and looks.
 
+## 🖼️ Variant gallery and sound
+
+Open **http://localhost:8787/?gallery** to see every card in every look: 20 cards, 226 looks.
+
+- **Many ways to draw one number.** Besides each card's own animation, any card can use a set of generic layouts when its data fits them: speedometer, odometer rollers, departure board, scratch card, trophy, icon grid, receipt, columns, road trip, chat, polaroids, podium, postcard, year calendar. The rules for which data each layout needs are in [`server/wrap/layouts.mjs`](server/wrap/layouts.mjs).
+- **Pick for prod.** Tick the looks production may use and press **Save picks**. The picks go to [`server/wrap/selection.mjs`](server/wrap/selection.mjs). A card with nothing ticked keeps all its looks in rotation.
+- **Play the decks.** **▶ Play all looks** plays every look back to back, and **▶ Play** next to a card plays only that card's looks. Add `&show=TOP_ROUTE.gauge` to the URL to open one look full size.
+- **Sound.** A soft background loop plays, plus effects timed to the animations: flaps, stamps, ticks while numbers count up, a printer, a train horn, a key card beep. It's all synthesised with Web Audio in [`src/lib/sound.ts`](src/lib/sound.ts), so there are no audio files. Audio starts on the first tap, the 🔊 button mutes it, and the gallery previews stay silent.
+
 ## 🎲 How every wrap becomes unique
 
 ```

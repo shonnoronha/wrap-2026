@@ -118,7 +118,10 @@ export interface InsightData {
 
 export const INSIGHT_TYPES = ['STREAK', 'RHYTHM', 'OPERATOR', 'GROWTH', 'EXTREMES', 'PLACES', 'SIGNATURE', 'FIRST_AND_LAST'] as const;
 export type InsightType = (typeof INSIGHT_TYPES)[number];
-export type InsightLayout = 'big_number' | 'ticket' | 'stack' | 'heatmap' | 'ring' | 'tiles' | 'versus' | 'route' | 'passport';
+export type InsightLayout = 'big_number' | 'ticket' | 'stack' | 'heatmap' | 'ring' | 'tiles' | 'versus' | 'route' | 'passport'
+  // 1.2: generic layouts any card can use when its data fits (server/wrap/layouts.mjs)
+  | 'gauge' | 'rollers' | 'flipboard' | 'scratch' | 'trophy' | 'pictogram' | 'receipt' | 'columns'
+  | 'timeline' | 'chat' | 'polaroid' | 'podium' | 'postcard' | 'calendar';
 /** TRAIN looks: a train rolling in · a PNR slip printing to CNF · a sleeper bay with the user's berth. */
 export type TrainLayout = 'coaches' | 'pnr' | 'berth';
 /** HOTEL_STAY looks: key card opening a door · hotel windows lighting up per night · luggage tags per city. */

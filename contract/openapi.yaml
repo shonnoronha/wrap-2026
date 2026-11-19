@@ -129,7 +129,7 @@ components:
         `insight` (InsightData) for that layout.
       required: [layout]
       properties:
-        layout: { type: string, enum: [default, big_number, ticket, stack, heatmap, ring, tiles, versus, route, passport, coaches, pnr, berth, keycard, skyline, luggage], description: 'TRAIN uses coaches | pnr | berth; HOTEL_STAY uses keycard | skyline | luggage; insight types and classic types use the rest.' }
+        layout: { type: string, enum: [default, big_number, ticket, stack, heatmap, ring, tiles, versus, route, passport, gauge, rollers, flipboard, scratch, trophy, pictogram, receipt, columns, timeline, chat, polaroid, podium, postcard, calendar, coaches, pnr, berth, keycard, skyline, luggage], description: 'TRAIN uses coaches | pnr | berth; HOTEL_STAY uses keycard | skyline | luggage. The generic layouts (gauge … calendar, server/wrap/layouts.mjs) can go on any card with an insight payload, including TRAIN and HOTEL_STAY, which then carry data.insight. Clients fall back to the type default for a layout they do not know.' }
         palette: { type: string, enum: [red, ink, mist, blush, night, sun, green] }
         mascotMood: { type: string, enum: [happy, wow, cheeky, love, cool, sleepy, sad] }
     InsightData:

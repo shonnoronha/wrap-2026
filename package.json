@@ -13,6 +13,8 @@
     "build": "tsc -b && vite build",
     "start": "npm run build && npm run compose && NODE_ENV=production node --env-file-if-exists=.env server/index.mjs",
     "test:api": "node server/selftest.mjs",
+    "test:rewind": "node server/rewind-test.mjs",
+    "test:picks": "node server/picks-test.mjs",
     "test:variety": "node server/variety-test.mjs",
     "build:demo": "VITE_STATIC=1 VITE_BRAND=neutral vite build && node scripts/make-artifact.mjs"
   },

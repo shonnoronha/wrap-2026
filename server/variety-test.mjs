@@ -8,16 +8,13 @@
 import assert from 'node:assert/strict';
 import { PROFILES, ROWS } from './data/rows.mjs';
 import { CARDS } from './wrap/cards.mjs';
-import { CAMPAIGN_SALT, checkCopy, composeBatch, composeWrap, MAX_CONTENT_CARDS } from './wrap/compose.mjs';
+import { CAMPAIGN_SALT, checkCopy, composeBatch, composeWrap, MAX_CONTENT_CARDS, setPicks } from './wrap/compose.mjs';
 import { checkRow, COLUMNS, normalise } from './wrap/facts.mjs';
 
-const INSIGHT_LAYOUTS = new Set(['big_number', 'ticket', 'stack', 'heatmap', 'ring', 'tiles', 'versus', 'route', 'passport']);
-/** What each layout needs in the insight payload to draw something real. */
-const NEEDS = {
-  big_number: (d) => d.hero, ring: (d) => d.hero?.suffix === '%', heatmap: (d) => d.heatmap?.length === 7 || d.weeks?.length === 53,
-  tiles: (d) => d.facts?.length >= 3, versus: (d) => d.compare?.length === 2, route: (d) => d.route?.from && d.route?.to,
-  passport: (d) => d.stamps?.length >= 2, ticket: (d) => d.facts?.length >= 1, stack: (d) => d.facts?.length >= 1,
-};
+import { INSIGHT_LAYOUTS as ALL_INSIGHT, NEEDS } from './wrap/layouts.mjs';
+const INSIGHT_LAYOUTS = new Set(ALL_INSIGHT);
+// This checks the full variant library; gallery picks (selection.mjs) are tested in picks-test.mjs.
+setPicks({});
 const entries = Object.keys(ROWS).map((id) => ({ userId: Number(id), row: ROWS[id], profile: PROFILES[id] }));
 const NOW = '2026-12-01T00:00:00.000Z';
 let checks = 0;
@@ -62,7 +59,7 @@ for (const id of users) {
     for (const t of Object.values(p.copy)) ok(!/undefined|NaN|null|\{/.test(t), `${id}/${p.type}: bad text "${t}"`);
     ok(JSON.stringify(p.data).match(/null|NaN/) === null, `${id}/${p.type}: hole in data`);
     const card = CARDS.find((c) => c.type === p.type);
-    if (p.variant.layout !== 'default' && card.customLayouts) {
+    if (p.variant.layout !== 'default' && card.customLayouts && !INSIGHT_LAYOUTS.has(p.variant.layout)) {
       // Trains / hotels draw their own looks; the layout must be one the card offers.
       const offered = new Set(Object.keys(card.framings).flatMap((k) => card.layoutsFor(k)));
       ok(offered.has(p.variant.layout), `${id}/${p.type}: layout ${p.variant.layout} not offered`);

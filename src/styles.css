@@ -143,7 +143,7 @@ button, input { font-family: inherit; }
 /* Top bar: progress + close */
 .topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 18px 14px 0 16px; }
 .progress { flex: 1; display: flex; gap: 4px; }
-.seg { flex: 1; height: 4px; border-radius: 99px; background: color-mix(in srgb, var(--fg, #fff) 22%, transparent); overflow: hidden; }
+.seg { flex: 1 1 0; min-width: 0; height: 4px; border-radius: 99px; background: color-mix(in srgb, var(--fg, #fff) 22%, transparent); overflow: hidden; }
 .seg > div { height: 100%; border-radius: 99px; background: var(--fg, #fff); }
 .close {
   width: 34px; height: 34px; border-radius: 50%; border: 0; flex: none;
@@ -167,3 +167,14 @@ button, input { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Variant gallery (/?gallery) */
+.gallery { min-height: 100%; background: #e9e9f1; }
+.gallery .btn:disabled { opacity: 0.45; cursor: default; }
+.g-icon {
+  width: 28px; height: 28px; border-radius: 50%; border: 0; cursor: pointer; flex: none;
+  background: var(--lavender); color: var(--ink); font-size: 16px; font-weight: 700; line-height: 1;
+}
+.g-icon:disabled { opacity: 0.35; cursor: default; }
+.g-link { border: 0; background: none; padding: 0; color: var(--red); font-weight: 700; font-size: 12px; cursor: pointer; text-decoration: underline; }
+.g-mid { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; margin: 0; line-height: 1; }

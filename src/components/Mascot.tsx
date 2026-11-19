@@ -2,6 +2,7 @@ import { motion, type MotionStyle, type TargetAndTransition } from 'framer-motio
 import { landing } from '../lib/motion';
 import { NAMES } from '../lib/brand';
 import { BRAND } from '../lib/themes';
+import { useSfxAt } from '../lib/sound';
 
 export type Mood = 'happy' | 'wow' | 'sleepy' | 'cheeky' | 'love' | 'cool' | 'sad';
 
@@ -36,6 +37,8 @@ const GLASS = '#EAF2FF';
 export function Mascot({ mood = 'happy', kind = 'bus', light, size = 140, drop, delay = 0, className, style }: Props) {
   const c = LIVERY[kind === 'bus' && light ? 'busLight' : kind];
   const h = size * 0.95;
+  // Drop: lands at 45% of the 0.9 s fall. Pop-in: a small pop.
+  useSfxAt(drop ? [delay + 0.4, 'boing'] : [delay + 0.05, 'pop', 0.3]);
   const blink: TargetAndTransition | undefined = mood === 'sleepy' || mood === 'love' || mood === 'cool' ? undefined : {
     scaleY: [1, 1, 0.1, 1],
     transition: { duration: 3.6, times: [0, 0.93, 0.965, 1], repeat: Infinity, delay: delay + 1 },

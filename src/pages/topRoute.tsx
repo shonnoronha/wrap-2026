@@ -7,6 +7,7 @@ import { PageShell } from '../components/PageShell';
 import { spring } from '../lib/motion';
 import { useSettle } from '../lib/settle';
 import { BRAND, THEMES } from '../lib/themes';
+import { useSfx } from '../lib/sound';
 
 /**
  * TOP_ROUTE, "the usual": a bus-stand departure board flips letter by letter to
@@ -23,8 +24,9 @@ const MAX_HOLES = 30;
 const boardName = (s: string, max: number) => s.replace(/\s*\(.*\)\s*$/, '').toUpperCase().slice(0, max);
 
 /** One split-flap cell: spins through letters, then lands on `ch` at `landAt` ms. */
-function Flap({ ch, landAt, w }: { ch: string; landAt: number; w: number }) {
+export function Flap({ ch, landAt, w }: { ch: string; landAt: number; w: number }) {
   const [shown, setShown] = useState(' ');
+  const sfx = useSfx();
   useEffect(() => {
     if (ch === ' ') return;
     const start = performance.now();
@@ -33,9 +35,10 @@ function Flap({ ch, landAt, w }: { ch: string; landAt: number; w: number }) {
       if (performance.now() - start >= landAt) { setShown(ch); clearInterval(id); return; }
       i = (i + 1) % FLAP.length;
       setShown(FLAP[i]);
+      sfx('flap');
     }, 55);
     return () => clearInterval(id);
-  }, [ch, landAt]);
+  }, [ch, landAt, sfx]);
   return (
     <span style={{ position: 'relative', width: w, height: 40, borderRadius: 5, background: '#2B2B2B', display: 'inline-grid', placeItems: 'center', overflow: 'hidden', perspective: 200,
       boxShadow: 'inset 0 -2px 0 rgba(0,0,0,0.5)' }}>
@@ -86,6 +89,9 @@ export function TopRoute({ page }: { page: PageOf<'TOP_ROUTE'> }) {
     return () => { alive = false; timers.forEach(clearTimeout); };
   }, [holes, settle]);
 
+  const sfx = useSfx();
+  useEffect(() => { if (punched) sfx('pop', punched / holes); }, [punched, holes, sfx]);
+  useEffect(() => { if (stamped) sfx('thud'); }, [stamped, sfx]);
   // The hero counts trips, not holes: past MAX_HOLES the last punch jumps to the real total.
   const shownCount = punched === holes ? d.count : punched;
   const jitter = useMemo(() => Array.from({ length: holes }, () => (Math.random() - 0.5) * 3), [holes]);

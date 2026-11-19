@@ -136,6 +136,15 @@ export function normalise(row, profile = {}) {
     leg.count += r.count;
     legsByPair.set(pair, leg);
   }
+  // Rewind rows carry every route with coordinates (map_trail_inputs), so small towns make the map too.
+  for (const t of Array.isArray(row._trail) ? row._trail : []) {
+    const r = parseRoute(t.route);
+    if (!r) continue;
+    const a = place(r.from, t.srcLat, t.srcLon), b = place(r.to, t.dstLat, t.dstLon);
+    if (!a || !b || a === b || !coords.has(a) || !coords.has(b)) continue;
+    const pair = [a, b].sort().join('|');
+    if (!legsByPair.has(pair)) legsByPair.set(pair, { from: a, to: b, mode: 'BUS', count: 1 });
+  }
   if (!legsByPair.size && top) {
     const a = place(top.from), b = place(top.to);
     if (a && b && a !== b && coords.has(a) && coords.has(b)) legsByPair.set('top', { from: a, to: b, mode: 'BUS', count: num(row.top_route_trips) ?? 1 });
@@ -167,6 +176,7 @@ export function normalise(row, profile = {}) {
     totalKm: kmEstimatedShare > 0.3 ? Math.round(totalKm / 100) * 100 : totalKm,
     kmIsApprox: kmEstimatedShare > 0.3,
     kmSince2025: num(row.km_since_2025),
+    kmLifetime: num(row._lifetime_km), // rewind rows: all-time km instead of "since 2025"
     tripsSince2025: num(row.trips_since_2025),
     earthLaps: num(row.earth_laps) ?? totalKm / 40075,
     avgTripKm: num(row.avg_trip_km) ?? (trips ? totalKm / trips : 0),
